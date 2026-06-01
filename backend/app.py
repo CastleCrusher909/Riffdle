@@ -611,12 +611,15 @@ def random_song():
     query = f"{song['title']} {song['artist']} official audio"
 
     ydl_opts = {"quiet": True, "no_warnings": True, "extract_flat": True, **YT_COOKIES}
-    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        info = ydl.extract_info(f"ytsearch1:{query}", download=False)
-        entries = info.get("entries") or []
-        if not entries:
-            return jsonify({"error": "Could not find song on YouTube"}), 404
-        vid = entries[0]["id"]
+    try:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(f"ytsearch1:{query}", download=False)
+            entries = info.get("entries") or []
+            if not entries:
+                return jsonify({"error": "Could not find song on YouTube"}), 404
+            vid = entries[0]["id"]
+    except Exception as e:
+        return jsonify({"error": f"YouTube lookup failed: {e}"}), 502
 
     return jsonify({"url": f"https://www.youtube.com/watch?v={vid}"})
 
@@ -628,24 +631,51 @@ def search_songs():
         return jsonify({"error": "No query"}), 400
 
     ydl_opts = {"quiet": True, "no_warnings": True, "extract_flat": True, **YT_COOKIES}
-    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        info = ydl.extract_info(f"ytsearch3:{query}", download=False)
-        results = []
-        for entry in (info.get("entries") or []):
-            vid = entry.get("id", "")
-            dur = entry.get("duration") or 0
-            artist = (entry.get("uploader") or entry.get("channel") or "")
-            if artist.endswith(" - Topic"):
-                artist = artist[: -len(" - Topic")]
-            results.append({
-                "id": vid,
-                "title": entry.get("title", "Unknown"),
-                "artist": artist,
-                "thumbnail": f"https://img.youtube.com/vi/{vid}/mqdefault.jpg",
-                "duration": f"{int(dur) // 60}:{int(dur) % 60:02d}" if dur else "",
-                "url": f"https://www.youtube.com/watch?v={vid}",
-            })
+    try:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(f"ytsearch3:{query}", download=False)
+            results = []
+            for entry in (info.get("entries") or []):
+                vid = entry.get("id", "")
+                dur = entry.get("duration") or 0
+                artist = (entry.get("uploader") or entry.get("channel") or "")
+                if artist.endswith(" - Topic"):
+                    artist = artist[: -len(" - Topic")]
+                results.append({
+                    "id": vid,
+                    "title": entry.get("title", "Unknown"),
+                    "artist": artist,
+                    "thumbnail": f"https://img.youtube.com/vi/{vid}/mqdefault.jpg",
+                    "duration": f"{int(dur) // 60}:{int(dur) % 60:02d}" if dur else "",
+                    "url": f"https://www.youtube.com/watch?v={vid}",
+                })
+    except Exception as e:
+        return jsonify({"error": f"YouTube search failed: {e}"}), 502
     return jsonify({"results": results})
+
+
+@app.route("/api/health")
+def health():
+    """Diagnostics for the hosted deploy — confirms R2, Modal, and cookies wiring."""
+    cookie_path = os.environ.get("YT_COOKIES_FILE") or "/etc/secrets/cookies.txt"
+    cookie_found = os.path.exists(cookie_path)
+    first_line = ""
+    if cookie_found:
+        try:
+            with open(cookie_path) as f:
+                first_line = f.readline().strip()[:60]
+        except Exception as e:
+            first_line = f"(unreadable: {e})"
+    return jsonify({
+        "r2_connected": bool(r2),
+        "use_modal": USE_MODAL,
+        "modal_token_set": bool(os.environ.get("MODAL_TOKEN_ID")),
+        "cookies_path": cookie_path,
+        "cookies_found": cookie_found,
+        "cookies_first_line": first_line,
+        "cookies_active": bool(YT_COOKIES),
+        "cached_songs": len(_load_index()),
+    })
 
 
 @app.route("/api/answer/<session_id>")
