@@ -284,6 +284,10 @@ def download_audio(url: str, session_id: str) -> dict:
         "noplaylist": True,
         "quiet": True,
         "no_warnings": True,
+        # Force the android_vr client: it returns directly-downloadable audio
+        # formats. With cookies present yt-dlp otherwise prefers the web client,
+        # whose formats need PO tokens and fail with "format is not available".
+        "extractor_args": {"youtube": {"player_client": ["android_vr"]}},
         **YT_COOKIES,
         "postprocessors": [
             {
