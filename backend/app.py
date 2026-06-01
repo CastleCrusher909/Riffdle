@@ -100,8 +100,17 @@ games = {}
 # YT_COOKIES_FILE at one, or drop it at /etc/secrets/cookies.txt (Render secret
 # file). Empty locally on your Mac (residential IP doesn't need it).
 def _cookie_opts() -> dict:
-    path = os.environ.get("YT_COOKIES_FILE") or "/etc/secrets/cookies.txt"
-    return {"cookiefile": path} if os.path.exists(path) else {}
+    src = os.environ.get("YT_COOKIES_FILE") or "/etc/secrets/cookies.txt"
+    if not os.path.exists(src):
+        return {}
+    # Render mounts secret files read-only, but yt-dlp rewrites the cookie jar
+    # after each request. Copy to a writable temp path so that write succeeds.
+    dst = "/tmp/yt_cookies.txt"
+    try:
+        shutil.copyfile(src, dst)
+        return {"cookiefile": dst}
+    except Exception:
+        return {"cookiefile": src}
 
 YT_COOKIES = _cookie_opts()
 
