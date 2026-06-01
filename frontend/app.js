@@ -1,0 +1,565 @@
+// Origin-relative so the app works both on localhost and from another device on
+// the LAN (e.g. http://172.16.x.x:5001) — needed for multiplayer across devices.
+const API = `${location.origin}/api`;
+window.mpActive = false;   // true while a multiplayer game owns the shared UI/audio
+
+const ALL_STEMS = ["drums", "bass", "melody", "vocals"];
+let activeStemOrder = [];
+
+let sessionId = null;
+let stemsRevealed = 0;
+let score = 0;
+let gameOver = false;
+let titleGuessed = false;
+let artistGuessed = false;
+let resultTitle = null;
+let resultArtist = null;
+let pollToken = 0;       // incremented to cancel stale poll loops
+let revealLocked = false; // debounce guard — prevents double-firing the reveal button
+
+// ── Screen helpers ────────────────────────────────────────────
+function showScreen(id) {
+  document.querySelectorAll(".screen").forEach((s) => s.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+}
+
+function setError(el, msg) {
+  el.textContent = msg;
+  el.classList.remove("hidden");
+}
+
+// ── Landing ───────────────────────────────────────────────────
+document.getElementById("btn-start").addEventListener("click", handleSearchOrStart);
+document.getElementById("yt-url").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") handleSearchOrStart();
+});
+
+function isUrl(str) {
+  return str.startsWith("http://") || str.startsWith("https://") || str.startsWith("www.");
+}
+
+async function handleSearchOrStart() {
+  const input = document.getElementById("yt-url").value.trim();
+  const errEl = document.getElementById("landing-error");
+  errEl.classList.add("hidden");
+  if (!input) { setError(errEl, "Enter a song name or YouTube URL."); return; }
+
+  if (isUrl(input)) {
+    startGame(input);
+  } else {
+    await searchSongs(input);
+  }
+}
+
+async function searchSongs(query) {
+  const errEl = document.getElementById("landing-error");
+  const btn = document.getElementById("btn-start");
+  const resultsEl = document.getElementById("search-results");
+
+  btn.textContent = "Searching…";
+  btn.disabled = true;
+  resultsEl.classList.add("hidden");
+  resultsEl.innerHTML = "";
+
+  try {
+    const res = await fetch(`${API}/search?q=${encodeURIComponent(query)}`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Search failed");
+    renderSearchResults(data.results);
+  } catch (err) {
+    setError(errEl, `Search error: ${err.message}`);
+  } finally {
+    btn.textContent = "Search";
+    btn.disabled = false;
+  }
+}
+
+function renderSearchResults(results) {
+  const el = document.getElementById("search-results");
+  el.innerHTML = "";
+  if (!results.length) {
+    el.innerHTML = "<p class='no-results'>No results found.</p>";
+    el.classList.remove("hidden");
+    return;
+  }
+  results.forEach((r) => {
+    const card = document.createElement("button");
+    card.className = "search-card";
+    card.innerHTML = `
+      <img class="search-thumb" src="${r.thumbnail}" alt="" />
+      <div class="search-meta">
+        <span class="search-title">${escapeHtml(r.title)}</span>
+        <span class="search-artist">${escapeHtml(r.artist)}${r.duration ? ` · ${r.duration}` : ""}</span>
+      </div>
+    `;
+    card.addEventListener("click", () => startGame(r.url));
+    el.appendChild(card);
+  });
+  el.classList.remove("hidden");
+}
+
+async function startGame(url) {
+  const errEl = document.getElementById("landing-error");
+  errEl.classList.add("hidden");
+  document.getElementById("search-results").classList.add("hidden");
+
+  showScreen("screen-loading");
+  setLoadingLabel("Sending link to server…");
+
+  try {
+    const res = await fetch(`${API}/start`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Server error");
+    sessionId = data.session_id;
+    pollToken++;
+    pollStatus(pollToken);
+  } catch (err) {
+    showScreen("screen-landing");
+    setError(errEl, `Error: ${err.message}`);
+  }
+}
+
+function setLoadingLabel(msg) {
+  document.getElementById("loading-label").textContent = msg;
+}
+
+async function pollStatus(token) {
+  if (token !== pollToken) return;  // stale loop — bail out
+
+  try {
+    const res = await fetch(`${API}/status/${sessionId}`);
+    const data = await res.json();
+
+    if (token !== pollToken) return;  // cancelled while fetch was in flight
+
+    if (data.status === "checking_cache") setLoadingLabel("Checking cache…");
+    else if (data.status === "downloading") setLoadingLabel("Downloading audio from YouTube…");
+    else if (data.status === "separating") setLoadingLabel("Separating stems with Demucs… (this takes a minute)");
+    else if (data.status === "queued") setLoadingLabel("Queued…");
+    else if (data.status === "ready") { initGame(data.stems_available); return; }
+    else if (data.status === "error") {
+      showScreen("screen-landing");
+      setError(document.getElementById("landing-error"), `Error: ${data.error}`);
+      return;
+    }
+  } catch (_) {}
+
+  setTimeout(() => pollStatus(token), 2000);
+}
+
+// ── Random ────────────────────────────────────────────────────
+// Scope to the landing-page filter chips only. A bare ".chip" selector would
+// also bind every multiplayer chip, double-toggling them (app.js + mp.js both
+// fire) and silently cancelling the user's clicks.
+document.querySelectorAll("#chips-decade .chip, #chips-genre .chip").forEach((chip) => {
+  chip.addEventListener("click", () => chip.classList.toggle("active"));
+});
+
+document.getElementById("btn-random").addEventListener("click", async () => {
+  const btn = document.getElementById("btn-random");
+  const errEl = document.getElementById("landing-error");
+  errEl.classList.add("hidden");
+
+  const decades = [...document.querySelectorAll("#chips-decade .chip.active")].map((c) => c.dataset.value);
+  const genres  = [...document.querySelectorAll("#chips-genre .chip.active")].map((c) => c.dataset.value);
+
+  const params = new URLSearchParams();
+  if (decades.length) params.set("decades", decades.join(","));
+  if (genres.length)  params.set("genres",  genres.join(","));
+
+  btn.textContent = "Finding song…";
+  btn.disabled = true;
+
+  try {
+    const res = await fetch(`${API}/random?${params}`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "No songs found");
+    startGame(data.url);
+  } catch (err) {
+    setError(errEl, `Random error: ${err.message}`);
+  } finally {
+    btn.textContent = "🎲 Random";
+    btn.disabled = false;
+  }
+});
+
+// ── Master player (Web Audio API — sample-accurate, drift-free) ──────────────
+//
+// Every revealed stem is decoded into an AudioBuffer and played through a single
+// shared AudioContext clock. All sources are scheduled against the SAME clock with
+// the SAME start time + offset, so they are sample-aligned and physically cannot
+// drift apart. This replaces the old multi-<audio>-element approach, where each
+// element had its own independent clock and the stems would slip off-beat.
+
+let audioCtx = null;
+const buffers = {};          // stem name -> decoded AudioBuffer
+const bufferPromises = {};   // stem name -> in-flight decode promise (dedupes loads)
+let sources = {};            // stem name -> currently playing AudioBufferSourceNode
+let isPlaying = false;
+let startCtxTime = 0;        // audioCtx.currentTime anchor for the current playback run
+let startOffset = 0;         // position (s) that corresponds to startCtxTime.
+                             // Linear mode: absolute track position.
+                             // Loop mode: phase within the clip [0, loopRegion.length).
+let rafId = null;
+const SCHEDULE_AHEAD = 0.06; // schedule starts 60ms out so they fire precisely, not "asap"
+
+// Loop mode (multiplayer): play a fixed clip from the middle of the song on repeat.
+// null = linear playback (single-player). { start, length } = loop a segment.
+let loopRegion = null;
+
+function ensureCtx() {
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  return audioCtx;
+}
+
+function getDuration() {
+  for (const s of activeStemOrder.slice(0, stemsRevealed)) {
+    if (buffers[s]) return buffers[s].duration;
+  }
+  return 0;
+}
+
+// Track position (seconds) right now, derived from the shared clock.
+// In loop mode this is the phase within the clip, in [0, length).
+function currentPosition() {
+  if (!isPlaying) return startOffset;
+  const raw = audioCtx.currentTime - startCtxTime + startOffset;
+  if (loopRegion) {
+    const L = loopRegion.length;
+    return ((raw % L) + L) % L;   // wrap into [0, L)
+  }
+  const dur = getDuration();
+  return dur ? Math.min(Math.max(raw, 0), dur) : Math.max(raw, 0);
+}
+
+// Configure an AudioBufferSourceNode for loop playback when loopRegion is set.
+function applyLoop(src) {
+  if (!loopRegion) return;
+  src.loop = true;
+  src.loopStart = loopRegion.start;
+  src.loopEnd = loopRegion.start + loopRegion.length;
+}
+
+// Fetch + decode a stem's MP3 into an AudioBuffer (cached, deduped).
+function loadStemBuffer(stem) {
+  if (buffers[stem]) return Promise.resolve(buffers[stem]);
+  if (bufferPromises[stem]) return bufferPromises[stem];
+  const ctx = ensureCtx();
+  bufferPromises[stem] = fetch(`${API}/stem/${sessionId}/${stem}`)
+    .then((r) => r.arrayBuffer())
+    .then((ab) => ctx.decodeAudioData(ab))
+    .then((buf) => { buffers[stem] = buf; return buf; });
+  return bufferPromises[stem];
+}
+
+function stopAllSources() {
+  Object.values(sources).forEach((s) => { try { s.stop(); } catch (_) {} });
+  sources = {};
+}
+
+// Translate a track position into the buffer offset to pass to start().
+// Loop mode: clip start + phase (Web Audio then wraps at loopStart/loopEnd).
+function bufferOffset(pos) {
+  return loopRegion ? loopRegion.start + (pos % loopRegion.length) : Math.max(0, pos);
+}
+
+// (Re)start every revealed stem, anchored to a fresh clock point at `startOffset`.
+function restartSources() {
+  const ctx = ensureCtx();
+  stopAllSources();
+  const when = ctx.currentTime + SCHEDULE_AHEAD;
+  startCtxTime = when;
+  activeStemOrder.slice(0, stemsRevealed).forEach((stem) => {
+    if (!buffers[stem]) return;
+    const src = ctx.createBufferSource();
+    src.buffer = buffers[stem];
+    src.connect(ctx.destination);
+    applyLoop(src);
+    src.start(when, bufferOffset(startOffset));
+    sources[stem] = src;
+  });
+}
+
+// Add one newly revealed stem mid-playback, aligned to the EXISTING timeline.
+function addStemPlaying(stem) {
+  const ctx = audioCtx;
+  if (!buffers[stem] || !isPlaying) return;
+  if (sources[stem]) { try { sources[stem].stop(); } catch (_) {} }
+  const when = ctx.currentTime + SCHEDULE_AHEAD;
+  const pos = when - startCtxTime + startOffset; // position that must sound at `when`
+  const src = ctx.createBufferSource();
+  src.buffer = buffers[stem];
+  src.connect(ctx.destination);
+  applyLoop(src);
+  src.start(when, bufferOffset(pos));
+  sources[stem] = src;
+}
+
+function masterPlay() {
+  const ctx = ensureCtx();
+  if (ctx.state === "suspended") ctx.resume();
+  if (!activeStemOrder.slice(0, stemsRevealed).some((s) => buffers[s])) return;
+  isPlaying = true;
+  restartSources();
+  document.getElementById("btn-play-all").textContent = "⏸";
+  cancelAnimationFrame(rafId);
+  rafId = requestAnimationFrame(tickSeekBar);
+}
+
+function masterPause() {
+  if (!isPlaying) return;
+  startOffset = currentPosition();
+  isPlaying = false;
+  stopAllSources();
+  document.getElementById("btn-play-all").textContent = "▶";
+  cancelAnimationFrame(rafId);
+}
+
+function masterStop() {
+  isPlaying = false;
+  stopAllSources();
+  startOffset = 0;
+  document.getElementById("btn-play-all").textContent = "▶";
+  cancelAnimationFrame(rafId);
+  document.getElementById("seek-bar").value = 0;
+  document.getElementById("time-current").textContent = "0:00";
+}
+
+function tickSeekBar() {
+  const dur = loopRegion ? loopRegion.length : getDuration();
+  if (dur) {
+    const pos = currentPosition();
+    document.getElementById("seek-bar").value = (pos / dur) * 100;
+    document.getElementById("time-current").textContent = fmtTime(pos);
+    document.getElementById("time-total").textContent = fmtTime(dur);
+    // Linear mode stops at the end; loop mode just keeps cycling.
+    if (!loopRegion && isPlaying && pos >= dur - 0.02) { masterStop(); return; }
+  }
+  if (isPlaying) rafId = requestAnimationFrame(tickSeekBar);
+}
+
+function fmtTime(s) {
+  const m = Math.floor(s / 60);
+  return `${m}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
+}
+
+document.getElementById("btn-play-all").addEventListener("click", () => {
+  if (isPlaying) masterPause(); else masterPlay();
+});
+
+document.getElementById("seek-bar").addEventListener("input", () => {
+  const dur = getDuration();
+  if (!dur) return;
+  const target = (document.getElementById("seek-bar").value / 100) * dur;
+  startOffset = target;
+  if (isPlaying) restartSources();
+  document.getElementById("time-current").textContent = fmtTime(target);
+});
+
+// ── Game init ─────────────────────────────────────────────────
+function initGame(stems) {
+  activeStemOrder = stems;
+  stemsRevealed = 0;
+  score = 0;
+  gameOver = false;
+  titleGuessed = false;
+  artistGuessed = false;
+  resultTitle = null;
+  resultArtist = null;
+  revealLocked = false;
+
+  // Reset the Web Audio engine for a fresh song (single-player = linear, no loop)
+  stopAllSources();
+  isPlaying = false;
+  startOffset = 0;
+  startCtxTime = 0;
+  loopRegion = null;
+  for (const k in buffers) delete buffers[k];
+  for (const k in bufferPromises) delete bufferPromises[k];
+  cancelAnimationFrame(rafId);
+
+  document.getElementById("artist-bonus").classList.add("hidden");
+  document.getElementById("guess-log").innerHTML = "";
+  document.getElementById("score-display").textContent = "Score: 0";
+  document.getElementById("guess-input").value = "";
+  document.getElementById("btn-play-all").textContent = "▶";
+  document.getElementById("btn-play-all").disabled = true;
+  document.getElementById("seek-bar").value = 0;
+  document.getElementById("seek-bar").disabled = true;
+  document.getElementById("time-current").textContent = "0:00";
+  document.getElementById("time-total").textContent = "0:00";
+
+  // Show only active stems, reset + hide the rest
+  ALL_STEMS.forEach((stem) => {
+    const card = document.getElementById(`stem-${stem}`);
+    card.classList.remove("unlocked");
+    card.style.display = activeStemOrder.includes(stem) ? "" : "none";
+  });
+
+  document.getElementById("btn-next-stem").onclick = revealNextStem;
+  showScreen("screen-game");
+  revealNextStem();
+}
+
+// ── Stem reveal ───────────────────────────────────────────────
+function revealNextStem() {
+  if (revealLocked || stemsRevealed >= activeStemOrder.length) return;
+  revealLocked = true;
+  setTimeout(() => { revealLocked = false; }, 400);
+
+  const stem = activeStemOrder[stemsRevealed];
+  stemsRevealed++;
+
+  const card = document.getElementById(`stem-${stem}`);
+  card.classList.add("unlocked");
+
+  // Enable master player on first stem
+  document.getElementById("btn-play-all").disabled = false;
+  document.getElementById("seek-bar").disabled = false;
+
+  // Decode the stem; once ready, slot it into the running mix (if playing)
+  loadStemBuffer(stem)
+    .then(() => { if (isPlaying) addStemPlaying(stem); })
+    .catch((err) => console.error(`Failed to load stem "${stem}":`, err));
+
+  updateRevealUI();
+}
+
+function updateRevealUI() {
+  const total = activeStemOrder.length;
+  const pct = (stemsRevealed / total) * 100;
+  document.getElementById("progress-fill").style.width = `${pct}%`;
+  document.getElementById("reveal-label").textContent =
+    `Stem ${stemsRevealed} of ${total} revealed`;
+
+  const btn = document.getElementById("btn-next-stem");
+  if (stemsRevealed >= total) {
+    btn.textContent = "Show answer";
+    btn.onclick = showAnswer;
+  } else {
+    btn.textContent = "Reveal next stem";
+    btn.onclick = revealNextStem;
+  }
+}
+
+// onclick is set dynamically in updateRevealUI — no static listener here
+
+// ── Guessing ──────────────────────────────────────────────────
+document.getElementById("btn-guess").addEventListener("click", submitGuess);
+document.getElementById("guess-input").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") submitGuess();
+});
+
+document.getElementById("btn-skip").addEventListener("click", () => {
+  if (gameOver) return;
+  if (titleGuessed) { finishGame(); return; }
+  addGuessEntry("(skipped)", "wrong", 0);
+  if (stemsRevealed < activeStemOrder.length) revealNextStem();
+  else showAnswer();
+});
+
+async function submitGuess() {
+  if (window.mpActive) return;   // multiplayer handles its own guessing (mp.js)
+  if (gameOver) return;
+  const input = document.getElementById("guess-input");
+  const guess = input.value.trim();
+  if (!guess) return;
+  input.value = "";
+
+  try {
+    const res = await fetch(`${API}/guess`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ session_id: sessionId, guess, stems_revealed: stemsRevealed }),
+    });
+    const data = await res.json();
+
+    if (data.result === "correct") {
+      addGuessEntry(data.title, "correct", data.points);
+      score += data.points;
+      document.getElementById("score-display").textContent = `Score: ${score}`;
+      resultTitle = data.title;
+      resultArtist = data.artist;
+      titleGuessed = true;
+      if (artistGuessed) {
+        finishGame();
+      } else {
+        document.getElementById("artist-bonus").classList.remove("hidden");
+      }
+    } else if (data.result === "artist") {
+      addGuessEntry(data.artist, "artist", data.points);
+      score += data.points;
+      document.getElementById("score-display").textContent = `Score: ${score}`;
+      artistGuessed = true;
+      document.getElementById("artist-bonus").classList.add("hidden");
+      if (titleGuessed) finishGame();
+    } else {
+      addGuessEntry(guess, "wrong", 0);
+    }
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+function finishGame() {
+  gameOver = true;
+  setTimeout(() => showResult(resultTitle, resultArtist), 600);
+}
+
+function addGuessEntry(text, result, pts) {
+  const log = document.getElementById("guess-log");
+  const el = document.createElement("div");
+  el.className = `guess-entry ${result}`;
+  const badge = result === "correct" ? "✓" : result === "artist" ? "½" : "✗";
+  const label = result === "artist" ? `<span class="guess-hint">correct artist</span>` : "";
+  el.innerHTML = `
+    <span class="guess-badge">${badge}</span>
+    <span class="guess-text">${escapeHtml(text)}</span>
+    ${label}
+    ${pts > 0 ? `<span class="guess-pts">+${pts}</span>` : ""}
+  `;
+  log.prepend(el);
+}
+
+function escapeHtml(str) {
+  return str.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+
+// ── Answer ────────────────────────────────────────────────────
+async function showAnswer() {
+  if (gameOver || titleGuessed) { showResult(resultTitle, resultArtist); return; }
+  gameOver = true;
+  try {
+    const res = await fetch(`${API}/answer/${sessionId}`);
+    const data = await res.json();
+    showResult(data.title, data.artist);
+  } catch (err) {
+    showResult("Unknown", "Unknown");
+  }
+}
+
+function showResult(title, artist) {
+  masterStop();
+  document.getElementById("result-title").textContent = title || "—";
+  document.getElementById("result-artist").textContent = artist ? `by ${artist}` : "";
+  document.getElementById("result-score").textContent = score;
+  showScreen("screen-result");
+}
+
+document.getElementById("btn-play-again").addEventListener("click", () => {
+  pollToken++;  // cancel any running poll loop
+  sessionId = null;
+  score = 0;
+  stemsRevealed = 0;
+  gameOver = false;
+  document.getElementById("yt-url").value = "";
+  document.getElementById("search-results").classList.add("hidden");
+  document.getElementById("search-results").innerHTML = "";
+  showScreen("screen-landing");
+});

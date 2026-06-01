@@ -1,0 +1,17 @@
+# Keep the Docker build context tiny — the venv alone is ~5GB.
+venv/
+audio/
+.git/
+.gitignore
+__pycache__/
+**/__pycache__/
+*.pyc
+.env
+precache.log
+*.md
+modal_separate.py
+precache.py
+repair_cache.py
+upload_to_r2.py
+requirements.txt
+.claude/

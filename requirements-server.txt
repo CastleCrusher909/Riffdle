@@ -1,0 +1,10 @@
+# Lightweight deps for the HOSTED web server (Render).
+# Separation runs on Modal's GPU, so torch/demucs/torchcodec are NOT needed here
+# — which keeps the image small and the build fast. yt-dlp is installed as the
+# nightly build in the Dockerfile (the stable release lags behind YouTube).
+flask
+flask-cors
+flask-socketio
+python-dotenv
+boto3
+modal

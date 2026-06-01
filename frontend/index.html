@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Riffdle</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- ── Landing ───────────────────────────────────────────────── -->
+  <div id="screen-landing" class="screen active">
+    <div class="hero">
+      <h1 class="logo">🎸 Riffdle</h1>
+      <p class="tagline">Guess the song — one stem at a time.</p>
+      <div class="url-form">
+        <input
+          id="yt-url"
+          type="text"
+          placeholder="Song name or YouTube URL…"
+          autocomplete="off"
+        />
+        <button id="btn-start">Search</button>
+      </div>
+      <p id="landing-error" class="error-msg hidden"></p>
+      <div id="search-results" class="search-results hidden"></div>
+
+      <div class="random-section">
+        <div class="divider"><span>or</span></div>
+        <div class="filter-group">
+          <span class="filter-label">Decade</span>
+          <div class="chips" id="chips-decade">
+            <button class="chip" data-value="70s">70s</button>
+            <button class="chip" data-value="80s">80s</button>
+            <button class="chip" data-value="90s">90s</button>
+            <button class="chip" data-value="00s">00s</button>
+            <button class="chip" data-value="10s">10s</button>
+            <button class="chip" data-value="20s">20s</button>
+          </div>
+        </div>
+        <div class="filter-group">
+          <span class="filter-label">Genre</span>
+          <div class="chips" id="chips-genre">
+            <button class="chip" data-value="pop">Pop</button>
+            <button class="chip" data-value="rock">Rock</button>
+            <button class="chip" data-value="hiphop">Hip-Hop</button>
+            <button class="chip" data-value="randb">R&amp;B</button>
+            <button class="chip" data-value="electronic">Electronic</button>
+          </div>
+        </div>
+        <p class="filter-hint">Pick filters to narrow it down, or leave blank for any song.</p>
+        <button id="btn-random">🎲 Random</button>
+      </div>
+
+      <div class="mp-entry">
+        <div class="divider"><span>or</span></div>
+        <button id="btn-mp" class="btn-mp">🎮 Play with friends</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Multiplayer setup ─────────────────────────────────────── -->
+  <div id="screen-mp-setup" class="screen">
+    <div class="hero">
+      <h1 class="logo">🎮 Multiplayer</h1>
+      <p class="tagline">Create a room or join one with a code.</p>
+
+      <div class="mp-setup-field">
+        <label for="mp-name">Your name</label>
+        <input id="mp-name" type="text" maxlength="20" placeholder="e.g. Alex" autocomplete="off" />
+      </div>
+
+      <div class="mp-setup-cols">
+        <!-- Create -->
+        <div class="mp-setup-card">
+          <h3>Create a room</h3>
+          <div class="mp-field mp-field-row">
+            <div>
+              <span class="filter-label">Clip (sec)</span>
+              <input id="mp-timer-input" type="number" min="3" max="90" value="15" class="mp-len-input" />
+            </div>
+            <div>
+              <span class="filter-label">Rounds</span>
+              <input id="mp-rounds-input" type="number" min="1" max="20" value="3" class="mp-len-input" />
+            </div>
+          </div>
+          <p class="mp-len-hint">Clip loops from the song's middle, +1 stem each loop. Play a match of several rounds.</p>
+          <div class="mp-field">
+            <span class="filter-label">Decade <span class="filter-multi">— pick any number</span></span>
+            <div class="chips" id="mp-chips-decade">
+              <button class="chip" data-value="70s">70s</button>
+              <button class="chip" data-value="80s">80s</button>
+              <button class="chip" data-value="90s">90s</button>
+              <button class="chip" data-value="00s">00s</button>
+              <button class="chip" data-value="10s">10s</button>
+              <button class="chip" data-value="20s">20s</button>
+            </div>
+          </div>
+          <div class="mp-field">
+            <span class="filter-label">Genre <span class="filter-multi">— pick any number</span></span>
+            <div class="chips" id="mp-chips-genre">
+              <button class="chip" data-value="pop">Pop</button>
+              <button class="chip" data-value="rock">Rock</button>
+              <button class="chip" data-value="hiphop">Hip-Hop</button>
+              <button class="chip" data-value="randb">R&amp;B</button>
+              <button class="chip" data-value="electronic">Electronic</button>
+            </div>
+          </div>
+          <p class="filter-hint">Leave filters empty for songs from everything.</p>
+          <button id="btn-create-room">Create room</button>
+        </div>
+
+        <!-- Join -->
+        <div class="mp-setup-card">
+          <h3>Join a room</h3>
+          <div class="mp-field">
+            <span class="filter-label">Room code</span>
+            <input id="mp-code" type="text" maxlength="4" placeholder="ABCD"
+                   class="mp-code-input" autocomplete="off" />
+          </div>
+          <button id="btn-join-room">Join room</button>
+        </div>
+      </div>
+
+      <p id="mp-setup-error" class="error-msg hidden"></p>
+      <button id="btn-mp-back" class="btn-text">← Back</button>
+    </div>
+  </div>
+
+  <!-- ── Multiplayer lobby ─────────────────────────────────────── -->
+  <div id="screen-mp-lobby" class="screen">
+    <div class="lobby-box">
+      <h2>Lobby</h2>
+      <div class="lobby-code-row">
+        <div class="lobby-code">
+          <span class="lobby-code-label">Room code</span>
+          <span id="lobby-code" class="lobby-code-value">————</span>
+        </div>
+        <button id="btn-copy-link" class="btn-secondary">🔗 Copy invite link</button>
+      </div>
+
+      <div class="lobby-players">
+        <span class="filter-label">Players</span>
+        <ul id="lobby-player-list"></ul>
+      </div>
+
+      <!-- Host-only editable settings -->
+      <div class="lobby-settings" id="lobby-settings">
+        <p class="lobby-settings-note host">👑 You're the host — pick the vibe for everyone.</p>
+        <div class="mp-field">
+          <div class="mp-field-row">
+            <div>
+              <span class="filter-label">Clip (sec)</span>
+              <input id="lobby-timer-input" type="number" min="3" max="90" value="15" class="mp-len-input" />
+            </div>
+            <div>
+              <span class="filter-label">Rounds</span>
+              <input id="lobby-rounds-input" type="number" min="1" max="20" value="3" class="mp-len-input" />
+            </div>
+          </div>
+          <p class="mp-len-hint">Clip loops from the song's middle, +1 stem each loop.</p>
+        </div>
+        <div class="mp-field">
+          <span class="filter-label">Decade <span class="filter-multi">— pick any number</span></span>
+          <div class="chips" id="lobby-chips-decade">
+            <button class="chip" data-value="70s">70s</button>
+            <button class="chip" data-value="80s">80s</button>
+            <button class="chip" data-value="90s">90s</button>
+            <button class="chip" data-value="00s">00s</button>
+            <button class="chip" data-value="10s">10s</button>
+            <button class="chip" data-value="20s">20s</button>
+          </div>
+        </div>
+        <div class="mp-field">
+          <span class="filter-label">Genre <span class="filter-multi">— pick any number</span></span>
+          <div class="chips" id="lobby-chips-genre">
+            <button class="chip" data-value="pop">Pop</button>
+            <button class="chip" data-value="rock">Rock</button>
+            <button class="chip" data-value="hiphop">Hip-Hop</button>
+            <button class="chip" data-value="randb">R&amp;B</button>
+            <button class="chip" data-value="electronic">Electronic</button>
+          </div>
+        </div>
+        <p class="filter-hint">Leave filters empty for songs from everything.</p>
+      </div>
+
+      <!-- Read-only view for non-host players -->
+      <div class="lobby-settings-readonly hidden" id="lobby-settings-readonly">
+        <span class="filter-label">Game settings</span>
+        <ul class="lobby-summary">
+          <li>Clip length <strong id="ro-timer">—</strong></li>
+          <li>Rounds <strong id="ro-rounds">—</strong></li>
+          <li>Decades <strong id="ro-decades">—</strong></li>
+          <li>Genres <strong id="ro-genres">—</strong></li>
+        </ul>
+        <p class="lobby-settings-note">🔒 Only the host can change these.</p>
+      </div>
+
+      <p id="lobby-error" class="error-msg hidden"></p>
+      <button id="btn-start-game" class="hidden">Start game</button>
+      <p id="lobby-wait-msg" class="lobby-wait hidden">Waiting for the host to start…</p>
+      <button id="btn-leave-lobby" class="btn-text">← Leave room</button>
+    </div>
+  </div>
+
+  <!-- ── Multiplayer result ────────────────────────────────────── -->
+  <div id="screen-mp-result" class="screen">
+    <div class="result-box">
+      <h2 id="mp-result-heading">🏆 Round Over</h2>
+      <p id="mp-result-round" class="mp-result-round"></p>
+      <div class="answer-card">
+        <p class="answer-title" id="mp-result-title"></p>
+        <p class="answer-artist" id="mp-result-artist"></p>
+      </div>
+      <div class="leaderboard">
+        <span class="filter-label" id="mp-lb-label">Standings</span>
+        <ol id="mp-leaderboard"></ol>
+      </div>
+      <p id="mp-intermission" class="lobby-wait hidden">Next round in <strong>—</strong></p>
+      <button id="btn-mp-play-again" class="hidden">Play again</button>
+      <p id="mp-result-wait" class="lobby-wait hidden">Waiting for the host…</p>
+      <button id="btn-mp-leave-result" class="btn-text">← Leave room</button>
+    </div>
+  </div>
+
+  <!-- ── Loading ───────────────────────────────────────────────── -->
+  <div id="screen-loading" class="screen">
+    <div class="loading-box">
+      <div class="spinner"></div>
+      <p id="loading-label">Starting up…</p>
+    </div>
+  </div>
+
+  <!-- ── Game ─────────────────────────────────────────────────── -->
+  <div id="screen-game" class="screen">
+    <header class="game-header">
+      <span class="logo-sm">🎸 Riffdle</span>
+      <span id="score-display">Score: 0</span>
+    </header>
+
+    <!-- Multiplayer-only HUD (hidden unless body.mp) -->
+    <div id="mp-hud" class="mp-hud">
+      <button id="btn-mp-abort" class="btn-mp-abort hidden">✕ End game</button>
+      <div id="mp-round-badge" class="mp-round-badge"></div>
+      <div id="mp-timer" class="mp-timer">Next stem in <strong>—</strong></div>
+      <div id="mp-skip-status" class="mp-skip-status hidden"></div>
+      <div class="mp-hud-cols">
+        <div class="mp-scoreboard">
+          <span class="filter-label">Scores</span>
+          <ol id="mp-scores"></ol>
+        </div>
+        <div class="mp-feed-wrap">
+          <span class="filter-label">Activity</span>
+          <div id="mp-feed" class="mp-feed"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stems panel -->
+    <div class="stems-panel">
+      <div class="stem-card" id="stem-drums">
+        <div class="stem-icon">🥁</div>
+        <div class="stem-label">Drums</div>
+        <div class="stem-lock locked">🔒</div>
+      </div>
+      <div class="stem-card" id="stem-bass">
+        <div class="stem-icon">🎸</div>
+        <div class="stem-label">Bass</div>
+        <div class="stem-lock locked">🔒</div>
+      </div>
+      <div class="stem-card" id="stem-melody">
+        <div class="stem-icon">🎹</div>
+        <div class="stem-label">Melody</div>
+        <div class="stem-lock locked">🔒</div>
+      </div>
+      <div class="stem-card" id="stem-vocals">
+        <div class="stem-icon">🎤</div>
+        <div class="stem-label">Vocals</div>
+        <div class="stem-lock locked">🔒</div>
+      </div>
+    </div>
+
+    <!-- Master player -->
+    <div class="master-player">
+      <button id="btn-play-all" class="btn-play-all" disabled>▶</button>
+      <div class="master-seek-wrap">
+        <input id="seek-bar" type="range" min="0" max="100" value="0" step="0.1" />
+        <div class="time-row">
+          <span id="time-current">0:00</span>
+          <span id="time-total">0:00</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Reveal row -->
+    <div class="reveal-row">
+      <div class="reveal-progress">
+        <span id="reveal-label">Stem 1 of 4 revealed</span>
+        <div class="progress-bar"><div id="progress-fill"></div></div>
+      </div>
+      <button id="btn-next-stem" class="btn-secondary">Reveal next stem</button>
+      <button id="btn-mp-skip" class="btn-secondary">⏭ Skip stem</button>
+    </div>
+
+    <!-- Guess area -->
+    <div class="guess-area">
+      <div class="guess-form">
+        <input id="guess-input" type="text" placeholder="Song title or artist…" autocomplete="off" />
+        <button id="btn-guess">Guess</button>
+        <button id="btn-skip" class="btn-skip">Skip</button>
+      </div>
+      <p id="artist-bonus" class="artist-bonus hidden">🎤 Got it! Now name the artist for a bonus.</p>
+      <div id="guess-log"></div>
+    </div>
+  </div>
+
+  <!-- ── Result ────────────────────────────────────────────────── -->
+  <div id="screen-result" class="screen">
+    <div class="result-box">
+      <h2>🎉 Song Revealed!</h2>
+      <div class="answer-card">
+        <p class="answer-title" id="result-title"></p>
+        <p class="answer-artist" id="result-artist"></p>
+      </div>
+      <p class="final-score">Final score: <strong id="result-score"></strong></p>
+      <button id="btn-play-again">Play again</button>
+    </div>
+  </div>
+
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  <script src="app.js"></script>
+  <script src="mp.js"></script>
+</body>
+</html>

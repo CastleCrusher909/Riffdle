@@ -1,0 +1,19 @@
+# Environment / secrets
+.env
+
+# Python
+venv/
+__pycache__/
+*.pyc
+
+# Audio files (too large for git)
+audio/uploads/
+audio/stems/
+audio/cache/
+
+# Logs
+precache.log
+
+# macOS / editor junk
+.DS_Store
+*.swp

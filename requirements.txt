@@ -1,0 +1,9 @@
+flask
+flask-cors
+flask-socketio
+python-dotenv
+boto3
+yt-dlp
+demucs
+torchcodec
+modal

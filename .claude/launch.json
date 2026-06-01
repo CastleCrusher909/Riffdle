@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "riffdle",
+      "runtimeExecutable": "/Users/jameswepsic/Desktop/ProgramsHome/Riffdle/venv/bin/python3",
+      "runtimeArgs": ["backend/app.py"],
+      "port": 5001
+    }
+  ]
+}
