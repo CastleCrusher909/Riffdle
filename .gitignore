@@ -17,3 +17,6 @@ precache.log
 # macOS / editor junk
 .DS_Store
 *.swp
+
+# Local owner-only docs (not for the public repo)
+MANAGING_SONGS.md
