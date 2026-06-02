@@ -640,6 +640,15 @@ def get_songs():
     return jsonify([{"title": s["title"], "artist": s["artist"]} for s in SONGS])
 
 
+@app.route("/api/catalog")
+def catalog():
+    """Every song currently cached in R2 — used for search autocomplete so the
+    box only ever suggests songs that can actually be played."""
+    songs = playable_pool([], [])   # [{video_id, title, artist}] for cached songs
+    songs.sort(key=lambda s: s["title"].lower())
+    return jsonify({"cache_only": CACHE_ONLY, "songs": songs})
+
+
 @app.route("/api/random")
 def random_song():
     decades = [d.strip() for d in request.args.get("decades", "").split(",") if d.strip()]

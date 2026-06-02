@@ -34,6 +34,61 @@ document.getElementById("yt-url").addEventListener("keydown", (e) => {
   if (e.key === "Enter") handleSearchOrStart();
 });
 
+// Cached-song catalog for autocomplete. On the hosted site (cache_only) the
+// search box only suggests songs that are actually playable.
+let cachedCatalog = [];
+let cacheOnly = false;
+
+async function loadCatalog() {
+  try {
+    const data = await fetch(`${API}/catalog`).then((r) => r.json());
+    cachedCatalog = data.songs || [];
+    cacheOnly = !!data.cache_only;
+    if (cacheOnly) {
+      document.getElementById("yt-url").placeholder = "Search songs…";
+    }
+  } catch (_) {}
+}
+loadCatalog();
+
+function catalogMatches(query) {
+  const q = query.toLowerCase().trim();
+  if (!q) return [];
+  return cachedCatalog
+    .filter((s) => s.title.toLowerCase().includes(q) || s.artist.toLowerCase().includes(q))
+    .slice(0, 8);
+}
+
+function watchUrl(videoId) {
+  return `https://www.youtube.com/watch?v=${videoId}`;
+}
+
+function renderCatalogSuggestions(query) {
+  const el = document.getElementById("search-results");
+  const matches = catalogMatches(query);
+  el.innerHTML = "";
+  if (!matches.length) { el.classList.add("hidden"); return; }
+  matches.forEach((s) => {
+    const card = document.createElement("button");
+    card.className = "search-card";
+    card.innerHTML = `
+      <img class="search-thumb" src="https://img.youtube.com/vi/${s.video_id}/mqdefault.jpg" alt="" />
+      <div class="search-meta">
+        <span class="search-title">${escapeHtml(s.title)}</span>
+        <span class="search-artist">${escapeHtml(s.artist)}</span>
+      </div>`;
+    card.addEventListener("click", () => startGame(watchUrl(s.video_id)));
+    el.appendChild(card);
+  });
+  el.classList.remove("hidden");
+}
+
+// Live autocomplete from the cached catalog as the user types.
+document.getElementById("yt-url").addEventListener("input", (e) => {
+  if (isUrl(e.target.value)) { document.getElementById("search-results").classList.add("hidden"); return; }
+  renderCatalogSuggestions(e.target.value);
+});
+
 function isUrl(str) {
   return str.startsWith("http://") || str.startsWith("https://") || str.startsWith("www.");
 }
@@ -42,13 +97,20 @@ async function handleSearchOrStart() {
   const input = document.getElementById("yt-url").value.trim();
   const errEl = document.getElementById("landing-error");
   errEl.classList.add("hidden");
-  if (!input) { setError(errEl, "Enter a song name or YouTube URL."); return; }
+  if (!input) { setError(errEl, "Type a song name."); return; }
 
-  if (isUrl(input)) {
-    startGame(input);
-  } else {
-    await searchSongs(input);
+  if (isUrl(input)) { startGame(input); return; }
+
+  // Cache-only host: play the best cached match (no YouTube search).
+  if (cacheOnly) {
+    const matches = catalogMatches(input);
+    if (matches.length) startGame(watchUrl(matches[0].video_id));
+    else setError(errEl, "🎵 No song matches that yet — try 🎲 Random or 🎮 Play with friends!");
+    return;
   }
+
+  // Local Mac: fall back to a YouTube search so new songs can be cached.
+  await searchSongs(input);
 }
 
 async function searchSongs(query) {
