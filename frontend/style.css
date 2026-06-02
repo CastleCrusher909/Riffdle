@@ -104,6 +104,55 @@ button:active { transform: scale(0.97); }
 .error-msg { color: var(--red); margin-top: 0.75rem; font-size: 0.9rem; }
 .hidden    { display: none !important; }
 
+/* ── Request a song ──────────────────────────────────────────── */
+.request-section {
+  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  width: 100%;
+}
+.request-toggle {
+  background: transparent;
+  border: none;
+  color: var(--accent-lt);
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 0.2rem 0.4rem;
+  text-decoration: underline;
+}
+.request-toggle:hover { background: transparent; color: #c084fc; }
+.request-hint {
+  color: var(--muted);
+  font-size: 0.8rem;
+  margin: 0;
+}
+.request-form {
+  display: flex;
+  gap: 0.5rem;
+  width: 100%;
+  margin-top: 0.4rem;
+}
+.request-form input {
+  flex: 1;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: var(--radius);
+  padding: 0.6rem 0.9rem;
+  font-size: 0.95rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.request-form input:focus { border-color: var(--accent); }
+.request-msg {
+  color: var(--green);
+  font-size: 0.85rem;
+  margin: 0.3rem 0 0;
+}
+.request-msg.error { color: var(--red); }
+
 /* ── Random section ──────────────────────────────────────────── */
 .random-section {
   margin-top: 1.5rem;

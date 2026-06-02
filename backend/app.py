@@ -1,6 +1,7 @@
 import os
 import re
 import sys
+import time
 import uuid
 import json
 import random
@@ -86,6 +87,31 @@ def r2_key_exists(key: str) -> bool:
         return False
     try:
         r2.head_object(Bucket=R2_BUCKET, Key=key)
+        return True
+    except ClientError:
+        return False
+
+
+def r2_get_json(key: str, default):
+    """Read a small JSON object straight from R2 (no temp file). Returns `default`
+    if the key is missing, R2 is disabled, or the body can't be parsed."""
+    if not r2:
+        return default
+    try:
+        obj = r2.get_object(Bucket=R2_BUCKET, Key=key)
+        return json.loads(obj["Body"].read())
+    except (ClientError, ValueError, KeyError):
+        return default
+
+
+def r2_put_json(key: str, obj) -> bool:
+    """Write a small JSON object straight to R2. Returns True on success."""
+    if not r2:
+        return False
+    try:
+        r2.put_object(Bucket=R2_BUCKET, Key=key,
+                      Body=json.dumps(obj, indent=2).encode("utf-8"),
+                      ContentType="application/json")
         return True
     except ClientError:
         return False
@@ -407,11 +433,38 @@ def extract_video_id(url: str) -> str | None:
     return m.group(1) if m else None
 
 
+REQUESTS_KEY = "song_requests.json"   # user-submitted song requests (R2)
+_requests_lock = threading.Lock()
+
+
 def log_song_request(query: str):
-    """Hook for a future 'requested songs' list. For now this is a no-op."""
-    # TODO: append `query` to a song_requests list in R2 so the owner can review
-    # and batch-cache popular requests from their Mac.
-    pass
+    """Append a user's song request to song_requests.json in R2 (deduped by a
+    normalized key; re-requests bump a count so popular asks bubble up). Runs in a
+    background thread so the request path never blocks on R2."""
+    query = (query or "").strip()
+    if not query or not r2:
+        return
+
+    def _write():
+        key = _norm(query)
+        if not key:
+            return
+        with _requests_lock:
+            reqs = r2_get_json(REQUESTS_KEY, [])
+            if not isinstance(reqs, list):
+                reqs = []
+            now = time.strftime("%Y-%m-%d %H:%M", time.gmtime())
+            for entry in reqs:
+                if entry.get("key") == key:
+                    entry["count"] = entry.get("count", 1) + 1
+                    entry["last"] = now
+                    break
+            else:
+                reqs.append({"key": key, "query": query, "count": 1,
+                             "first": now, "last": now})
+            r2_put_json(REQUESTS_KEY, reqs)
+
+    threading.Thread(target=_write, daemon=True).start()
 
 
 def separate_via_modal(url: str, session_id: str) -> dict:
@@ -647,6 +700,20 @@ def catalog():
     songs = playable_pool([], [])   # [{video_id, title, artist}] for cached songs
     songs.sort(key=lambda s: s["title"].lower())
     return jsonify({"cache_only": CACHE_ONLY, "songs": songs})
+
+
+@app.route("/api/request", methods=["POST"])
+def request_song():
+    """Log a user's request to add a song. The owner reviews these later
+    (manage_requests.py) and caches the good ones from their Mac."""
+    data = request.get_json(silent=True) or {}
+    query = (data.get("query") or "").strip()[:120]
+    if not query:
+        return jsonify({"ok": False, "error": "empty"}), 400
+    if not r2:
+        return jsonify({"ok": False, "error": "unavailable"}), 503
+    log_song_request(query)
+    return jsonify({"ok": True})
 
 
 @app.route("/api/random")

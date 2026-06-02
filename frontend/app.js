@@ -252,6 +252,58 @@ document.getElementById("btn-random").addEventListener("click", async () => {
   }
 });
 
+// ── Request a song ────────────────────────────────────────────
+// Lets players ask for an uncached song; the owner reviews these later
+// (manage_requests.py) and caches the good ones.
+(() => {
+  const toggle = document.getElementById("btn-request-toggle");
+  const form = document.getElementById("request-form");
+  const input = document.getElementById("request-input");
+  const submit = document.getElementById("btn-request-submit");
+  const msg = document.getElementById("request-msg");
+  if (!toggle) return;
+
+  toggle.addEventListener("click", () => {
+    form.classList.toggle("hidden");
+    if (!form.classList.contains("hidden")) {
+      // Prefill with whatever they last typed in the search box
+      const typed = document.getElementById("yt-url").value.trim();
+      if (typed && !input.value) input.value = typed;
+      input.focus();
+    }
+  });
+
+  async function sendRequest() {
+    const query = input.value.trim();
+    if (!query) { input.focus(); return; }
+    submit.disabled = true;
+    submit.textContent = "Sending…";
+    msg.classList.add("hidden");
+    try {
+      const res = await fetch(`${API}/request`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query }),
+      });
+      if (!res.ok) throw new Error();
+      input.value = "";
+      form.classList.add("hidden");
+      msg.textContent = "✅ Thanks! Your request was sent.";
+      msg.classList.remove("hidden", "error");
+    } catch (_) {
+      msg.textContent = "Couldn't send that — try again later.";
+      msg.classList.remove("hidden");
+      msg.classList.add("error");
+    } finally {
+      submit.disabled = false;
+      submit.textContent = "Request";
+    }
+  }
+
+  submit.addEventListener("click", sendRequest);
+  input.addEventListener("keydown", (e) => { if (e.key === "Enter") sendRequest(); });
+})();
+
 // ── Master player (Web Audio API — sample-accurate, drift-free) ──────────────
 //
 // Every revealed stem is decoded into an AudioBuffer and played through a single

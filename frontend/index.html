@@ -25,6 +25,22 @@
       <p id="landing-error" class="error-msg hidden"></p>
       <div id="search-results" class="search-results hidden"></div>
 
+      <div class="request-section">
+        <button id="btn-request-toggle" class="request-toggle">Don't see your song?</button>
+        <p class="request-hint">Request a song and we'll try to add it to Riffdle.</p>
+        <div id="request-form" class="request-form hidden">
+          <input
+            id="request-input"
+            type="text"
+            placeholder="Song name &amp; artist…"
+            autocomplete="off"
+            maxlength="120"
+          />
+          <button id="btn-request-submit">Request</button>
+        </div>
+        <p id="request-msg" class="request-msg hidden"></p>
+      </div>
+
       <div class="random-section">
         <div class="divider"><span>or</span></div>
         <div class="filter-group">
