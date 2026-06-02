@@ -86,9 +86,11 @@ def search_youtube_url(query: str) -> str | None:
         return f"https://www.youtube.com/watch?v={entries[0]['id']}" if entries else None
 
 
-def cache_one(query: str, index: dict) -> str:
+def cache_one(query: str, index: dict, decade=None, genre=None) -> str:
     """Download + separate + upload one song. Returns one of:
-    'cached', 'exists', or 'fail:<reason>'. Mutates `index` on success."""
+    'cached', 'exists', or 'fail:<reason>'. Mutates `index` on success.
+    decade/genre (if given) are tagged onto the catalog entry so the song shows
+    up under those Random filters."""
     url = search_youtube_url(query)
     if not url:
         return "fail:no YouTube result"
@@ -126,7 +128,12 @@ def cache_one(query: str, index: dict) -> str:
         if not isinstance(cat, list):
             cat = []
         cat = [c for c in cat if c.get("video_id") != video_id]
-        cat.append({"video_id": video_id, "title": clean_title(title, artist), "artist": artist})
+        entry = {"video_id": video_id, "title": clean_title(title, artist), "artist": artist}
+        if decade:
+            entry["decade"] = decade
+        if genre:
+            entry["genre"] = genre
+        cat.append(entry)
         put_json(CATALOG_KEY, cat)
         return "cached"
 
@@ -151,10 +158,14 @@ def main():
 
     todo = queue[: args.limit] if args.limit else list(queue)
 
+    def tag_str(q):
+        d, g = q.get("decade"), q.get("genre")
+        return f"  [{d or '?'}/{g or '?'}]" if (d or g) else "  [untagged]"
+
     print(f"Queue has {len(queue)} song(s); processing {len(todo)}.")
     if args.dry_run:
         for i, q in enumerate(todo, 1):
-            print(f"  [{i}] {q.get('query', '?')}")
+            print(f"  [{i}] {q.get('query', '?')}{tag_str(q)}")
         print("(dry run — nothing cached)")
         return
 
@@ -167,8 +178,8 @@ def main():
         query = entry.get("query", "").strip()
         if not query:
             continue
-        print(f"\n[{i}/{len(todo)}] {query}")
-        result = cache_one(query, index)
+        print(f"\n[{i}/{len(todo)}] {query}{tag_str(entry)}")
+        result = cache_one(query, index, entry.get("decade"), entry.get("genre"))
 
         if result in ("cached", "exists"):
             # Remove this entry from the live queue and persist (resumable)

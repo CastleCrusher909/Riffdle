@@ -124,19 +124,57 @@ def r2_put_json(key: str, obj) -> bool:
 # cached (here and in cache_queue.py).
 CATALOG_KEY = "catalog.json"
 _catalog_lock = threading.Lock()
+_catalog_cache = {"t": 0.0, "songs": None}   # in-memory TTL cache of catalog.json
+CATALOG_TTL = 30   # seconds — keep R2 reads cheap without going stale for long
 
 
-def add_to_catalog(video_id: str, title: str, artist: str):
-    """Upsert a song into catalog.json (deduped by video_id)."""
+def _get_catalog():
+    """Return the cached-song catalog list (from catalog.json in R2), or None if
+    it doesn't exist yet. Cached in-memory for CATALOG_TTL seconds."""
+    now = time.time()
+    if _catalog_cache["songs"] is None or now - _catalog_cache["t"] > CATALOG_TTL:
+        songs = r2_get_json(CATALOG_KEY, None)
+        _catalog_cache.update(t=now, songs=songs if isinstance(songs, list) else None)
+    return _catalog_cache["songs"]
+
+
+def _invalidate_catalog():
+    _catalog_cache["songs"] = None
+
+
+def add_to_catalog(video_id: str, title: str, artist: str, decade=None, genre=None):
+    """Upsert a song into catalog.json (deduped by video_id). When decade/genre
+    aren't given, fill them from songs.json if the title matches a seed entry, so
+    cached seed-list songs land under the right decade/genre filters."""
     if not r2 or not video_id:
         return
+    if decade is None or genre is None:
+        seed = _seed_by_core_title().get(core_title(title))
+        if seed:
+            decade = decade or seed.get("decade")
+            genre = genre or seed.get("genre")
     with _catalog_lock:
         cat = r2_get_json(CATALOG_KEY, [])
         if not isinstance(cat, list):
             cat = []
         cat = [c for c in cat if c.get("video_id") != video_id]
-        cat.append({"video_id": video_id, "title": title, "artist": artist})
+        entry = {"video_id": video_id, "title": title, "artist": artist}
+        if decade:
+            entry["decade"] = decade
+        if genre:
+            entry["genre"] = genre
+        cat.append(entry)
         r2_put_json(CATALOG_KEY, cat)
+    _invalidate_catalog()
+
+
+_seed_ct_cache = None
+def _seed_by_core_title():
+    """{core_title: seed-song} lookup over songs.json, built once."""
+    global _seed_ct_cache
+    if _seed_ct_cache is None:
+        _seed_ct_cache = {core_title(s["title"]): s for s in SONGS}
+    return _seed_ct_cache
 
 
 # In-memory game state: { session_id: { ... } }
@@ -719,23 +757,16 @@ def get_songs():
     return jsonify([{"title": s["title"], "artist": s["artist"]} for s in SONGS])
 
 
-_catalog_cache = {"t": 0.0, "songs": None}
-CATALOG_TTL = 30   # seconds — keep R2 reads cheap without going stale for long
-
-
 @app.route("/api/catalog")
 def catalog():
     """Every song currently cached in R2 — used for search autocomplete so the
     box can suggest any playable song. Reads catalog.json (kept fresh as songs
     are cached); falls back to the songs.json-gated pool if it's missing."""
-    now = time.time()
-    if _catalog_cache["songs"] is None or now - _catalog_cache["t"] > CATALOG_TTL:
-        songs = r2_get_json(CATALOG_KEY, None)
-        if not isinstance(songs, list):
-            songs = playable_pool([], [])   # fallback: songs.json ∩ cache index
-        songs.sort(key=lambda s: s.get("title", "").lower())
-        _catalog_cache.update(t=now, songs=songs)
-    return jsonify({"cache_only": CACHE_ONLY, "songs": _catalog_cache["songs"]})
+    songs = _get_catalog()
+    if songs is None:
+        songs = _seed_pool([], [])   # fallback: songs.json ∩ cache index
+    songs = sorted(songs, key=lambda s: s.get("title", "").lower())
+    return jsonify({"cache_only": CACHE_ONLY, "songs": songs})
 
 
 @app.route("/api/request", methods=["POST"])
@@ -916,9 +947,31 @@ def gen_room_code() -> str:
 
 def playable_pool(decades, genres):
     """
-    Cached songs (instant-start, no Demucs) that match the filters.
-    Joins songs.json (for decade/genre) against the cache index (for video_id).
+    Cached songs (instant-start, no Demucs) that match the filters. Drives the
+    hosted Random and all multiplayer rounds. Reads the full cache catalog
+    (catalog.json) so any cached song is eligible; a song only counts toward a
+    decade/genre filter if it's tagged with that decade/genre. Falls back to the
+    songs.json-gated pool if catalog.json doesn't exist yet.
     """
+    cat = _get_catalog()
+    if cat is None:
+        return _seed_pool(decades, genres)
+    pool = []
+    for s in cat:
+        if not s.get("video_id"):
+            continue
+        if decades and s.get("decade") not in decades:
+            continue
+        if genres and s.get("genre") not in genres:
+            continue
+        pool.append({"video_id": s["video_id"], "title": s.get("title", ""),
+                     "artist": s.get("artist", "")})
+    return pool
+
+
+def _seed_pool(decades, genres):
+    """Legacy fallback: cached songs that are also in songs.json (joins the seed
+    list's decade/genre against the local cache index)."""
     idx = _load_index()
     pool = []
     for s in SONGS:
