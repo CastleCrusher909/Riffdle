@@ -393,6 +393,26 @@ def separate_stems(wav_path: str, session_id: str) -> dict:
 # song". Local dev (your Mac) leaves it unset and uses local Demucs above.
 USE_MODAL = os.environ.get("RIFFDLE_USE_MODAL", "").lower() in ("1", "true", "yes")
 
+# When RIFFDLE_CACHE_ONLY is set (the hosted deploy), the server only plays songs
+# already cached in R2 — it never tries to download new ones. YouTube blocks
+# datacenter IPs from downloading, so new songs are added by the owner running
+# Riffdle locally (residential IP) which auto-populates R2.
+CACHE_ONLY = os.environ.get("RIFFDLE_CACHE_ONLY", "").lower() in ("1", "true", "yes")
+
+
+def extract_video_id(url: str) -> str | None:
+    """Pull the 11-char YouTube video id straight from a URL (no network call),
+    so cached songs can be served without ever hitting YouTube."""
+    m = re.search(r"(?:v=|youtu\.be/|/shorts/|/embed/)([A-Za-z0-9_-]{11})", url)
+    return m.group(1) if m else None
+
+
+def log_song_request(query: str):
+    """Hook for a future 'requested songs' list. For now this is a no-op."""
+    # TODO: append `query` to a song_requests list in R2 so the owner can review
+    # and batch-cache popular requests from their Mac.
+    pass
+
 
 def separate_via_modal(url: str, session_id: str) -> dict:
     """Download here (residential IP avoids YouTube's bot challenge), trim to 90s,
@@ -430,25 +450,29 @@ def process_game(session_id: str, url: str):
     try:
         # ── Cache check ───────────────────────────────────────────
         games[session_id]["status"] = "checking_cache"
-        meta = get_video_meta(url)
-        video_id = meta["id"] if meta else None
 
-        # 1. Check by exact video ID
+        # 1. Exact video-id match straight from the URL — no YouTube call needed,
+        #    so cached songs (and Random) work even if cookies/downloads don't.
+        video_id = extract_video_id(url)
         cached = load_cache(video_id) if video_id else None
 
-        # 2. Check by song identity (core title) — catches the same song from any upload
-        if not cached and meta:
-            ct = core_title(meta["title"])
-            idx = _load_index()
-            existing_id = idx.get(ct)
-            # Fuzzy fallback for near-identical core titles (minor spelling/spacing diffs)
-            if not existing_id:
-                for key, vid in idx.items():
-                    if SequenceMatcher(None, ct, key).ratio() >= 0.9:
-                        existing_id = vid
-                        break
-            if existing_id:
-                cached = load_cache(existing_id)
+        # 2. Miss → fetch metadata and match the same song from any other upload.
+        meta = None
+        if not cached:
+            meta = get_video_meta(url)
+            if meta and not video_id:
+                video_id = meta["id"]
+            if meta:
+                ct = core_title(meta["title"])
+                idx = _load_index()
+                existing_id = idx.get(ct)
+                if not existing_id:   # fuzzy fallback for minor spelling diffs
+                    for key, vid in idx.items():
+                        if SequenceMatcher(None, ct, key).ratio() >= 0.9:
+                            existing_id = vid
+                            break
+                if existing_id:
+                    cached = load_cache(existing_id)
 
         if cached:
             games[session_id].update({
@@ -459,7 +483,16 @@ def process_game(session_id: str, url: str):
             })
             return
 
-        # ── Full pipeline (cache miss) ────────────────────────────
+        # ── Cache miss ────────────────────────────────────────────
+        # Hosted deploy can't download new songs (YouTube blocks datacenter IPs),
+        # so fail gracefully and note the request for later.
+        if CACHE_ONLY:
+            log_song_request(meta["title"] if meta else url)
+            games[session_id]["status"] = "error"
+            games[session_id]["error"] = "not_cached"
+            return
+
+        # ── Full pipeline (local Mac / Modal) ─────────────────────
         games[session_id]["status"] = "separating"
 
         if USE_MODAL:
@@ -611,6 +644,15 @@ def get_songs():
 def random_song():
     decades = [d.strip() for d in request.args.get("decades", "").split(",") if d.strip()]
     genres  = [g.strip() for g in request.args.get("genres",  "").split(",") if g.strip()]
+
+    # Hosted (cache-only): pick from songs already cached in R2 and return the
+    # cached video id directly — no YouTube call, so Random always works.
+    if CACHE_ONLY:
+        pool = playable_pool(decades, genres)
+        if not pool:
+            return jsonify({"error": "No cached songs match those filters"}), 404
+        song = random.choice(pool)
+        return jsonify({"url": f"https://www.youtube.com/watch?v={song['video_id']}"})
 
     pool = SONGS
     if decades:

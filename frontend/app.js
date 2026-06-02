@@ -143,7 +143,10 @@ async function pollStatus(token) {
     else if (data.status === "ready") { initGame(data.stems_available); return; }
     else if (data.status === "error") {
       showScreen("screen-landing");
-      setError(document.getElementById("landing-error"), `Error: ${data.error}`);
+      const msg = data.error === "not_cached"
+        ? "🎵 That song isn't in Riffdle yet — try 🎲 Random, 🎮 multiplayer, or another song!"
+        : `Error: ${data.error}`;
+      setError(document.getElementById("landing-error"), msg);
       return;
     }
   } catch (_) {}
