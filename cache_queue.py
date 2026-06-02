@@ -30,12 +30,13 @@ from dotenv import load_dotenv
 import yt_dlp
 
 # Reuse the battle-tested download + separation pipeline from precache.py
-from precache import download_audio, separate_stems, core_title
+from precache import download_audio, separate_stems, core_title, clean_title
 
 load_dotenv()
 
 QUEUE_KEY = "song_queue.json"
 INDEX_KEY = "song_index.json"
+CATALOG_KEY = "catalog.json"
 
 
 def make_client():
@@ -119,6 +120,14 @@ def cache_one(query: str, index: dict) -> str:
         # Update the canonical R2 index immediately so it's never lost on a crash
         index[core_title(title)] = video_id
         put_json(INDEX_KEY, index)
+
+        # Add to the search catalog (deduped by video_id) so it's suggestable
+        cat = get_json(CATALOG_KEY, [])
+        if not isinstance(cat, list):
+            cat = []
+        cat = [c for c in cat if c.get("video_id") != video_id]
+        cat.append({"video_id": video_id, "title": clean_title(title, artist), "artist": artist})
+        put_json(CATALOG_KEY, cat)
         return "cached"
 
     except Exception as exc:

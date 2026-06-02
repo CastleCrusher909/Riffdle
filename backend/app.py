@@ -116,6 +116,29 @@ def r2_put_json(key: str, obj) -> bool:
     except ClientError:
         return False
 
+
+# ── Cached-song catalog (drives search autocomplete) ──────────────────────────
+# A flat list [{video_id, title, artist}] of every song cached in R2 — kept in
+# catalog.json so the search box can suggest ANY cached song, not just ones that
+# also happen to be in the songs.json seed list. Updated whenever a song is
+# cached (here and in cache_queue.py).
+CATALOG_KEY = "catalog.json"
+_catalog_lock = threading.Lock()
+
+
+def add_to_catalog(video_id: str, title: str, artist: str):
+    """Upsert a song into catalog.json (deduped by video_id)."""
+    if not r2 or not video_id:
+        return
+    with _catalog_lock:
+        cat = r2_get_json(CATALOG_KEY, [])
+        if not isinstance(cat, list):
+            cat = []
+        cat = [c for c in cat if c.get("video_id") != video_id]
+        cat.append({"video_id": video_id, "title": title, "artist": artist})
+        r2_put_json(CATALOG_KEY, cat)
+
+
 # In-memory game state: { session_id: { ... } }
 games = {}
 
@@ -297,6 +320,9 @@ def save_cache(video_id: str, title: str, artist: str, stem_files: dict):
     index[core_title(title)] = video_id
     _save_index(index)
     r2_upload(INDEX_FILE, "song_index.json")
+
+    # Add to the search catalog so it's instantly suggestable on the live site
+    add_to_catalog(video_id, clean_title(title, artist), artist)
 
 
 def download_audio(url: str, session_id: str) -> dict:
@@ -693,13 +719,23 @@ def get_songs():
     return jsonify([{"title": s["title"], "artist": s["artist"]} for s in SONGS])
 
 
+_catalog_cache = {"t": 0.0, "songs": None}
+CATALOG_TTL = 30   # seconds — keep R2 reads cheap without going stale for long
+
+
 @app.route("/api/catalog")
 def catalog():
     """Every song currently cached in R2 — used for search autocomplete so the
-    box only ever suggests songs that can actually be played."""
-    songs = playable_pool([], [])   # [{video_id, title, artist}] for cached songs
-    songs.sort(key=lambda s: s["title"].lower())
-    return jsonify({"cache_only": CACHE_ONLY, "songs": songs})
+    box can suggest any playable song. Reads catalog.json (kept fresh as songs
+    are cached); falls back to the songs.json-gated pool if it's missing."""
+    now = time.time()
+    if _catalog_cache["songs"] is None or now - _catalog_cache["t"] > CATALOG_TTL:
+        songs = r2_get_json(CATALOG_KEY, None)
+        if not isinstance(songs, list):
+            songs = playable_pool([], [])   # fallback: songs.json ∩ cache index
+        songs.sort(key=lambda s: s.get("title", "").lower())
+        _catalog_cache.update(t=now, songs=songs)
+    return jsonify({"cache_only": CACHE_ONLY, "songs": _catalog_cache["songs"]})
 
 
 @app.route("/api/request", methods=["POST"])
