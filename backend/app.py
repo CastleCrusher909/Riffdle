@@ -785,6 +785,7 @@ MAX_ROUNDS = 20
 DEFAULT_ROUNDS = 3
 INTERMISSION = 6      # seconds between rounds in a multi-round match
 GRACE_SECONDS = 5    # "last call" window for final guesses before a round closes
+STEM_BREAK = 3       # silent pause between stem reveals (music stops, countdown shows)
 TICK = 0.5           # reveal-loop poll interval (lets skips interrupt the wait)
 
 # Competitive scoring (multiplayer)
@@ -977,7 +978,8 @@ def finish_round_with_grace(code, token):
     if not room or room.get("round_token") != token or room["status"] != "playing":
         return
     room["status"] = "grace"
-    socketio.emit("last_call", {"seconds": GRACE_SECONDS}, room=code)
+    is_final = (room.get("rounds_played", 0) + 1) >= room.get("rounds_total", 1)
+    socketio.emit("last_call", {"seconds": GRACE_SECONDS, "is_final": is_final}, room=code)
     waited = 0.0
     while waited < GRACE_SECONDS:
         socketio.sleep(TICK)
@@ -986,6 +988,20 @@ def finish_round_with_grace(code, token):
         if not room or room.get("round_token") != token or room["status"] != "grace":
             return   # ended early (everyone finished) or aborted
     end_round(code)
+
+
+def stem_break_pause(code, token):
+    """A short silent break between stems (clients stop the music + count down).
+    Returns False if the round was aborted during the pause."""
+    socketio.emit("stem_break", {"seconds": STEM_BREAK}, room=code)
+    waited = 0.0
+    while waited < STEM_BREAK:
+        socketio.sleep(TICK)
+        waited += TICK
+        room = rooms.get(code)
+        if not room or room.get("round_token") != token or room["status"] != "playing":
+            return False
+    return True
 
 
 def run_round(code, token):
@@ -998,6 +1014,9 @@ def run_round(code, token):
     # Reveal stems 2..total
     for i in range(2, total + 1):
         if not wait_interval(code, token):
+            return
+        # Silent break before the next stem drops
+        if not stem_break_pause(code, token):
             return
         room = rooms.get(code)
         if not room or room.get("round_token") != token or room["status"] != "playing":

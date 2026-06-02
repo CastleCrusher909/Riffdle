@@ -29,6 +29,8 @@ let mpCountdownId = null;
 let mpCountdownLeft = 0;
 let mpIntermissionId = null; // between-round countdown on the result screen
 let mpGraceId = null;        // last-call countdown
+let mpBreakId = null;        // between-stem silent break countdown
+let mpResumeAfterBreak = false; // was music playing when the break started?
 let mpSkipVoted = false;     // whether we've voted to skip the current stem
 let mpAutoplayWanted = false;
 let mpMyScore = 0;
@@ -103,11 +105,19 @@ function registerSocketHandlers() {
   });
 
   socket.on("game_started", (d) => mpStartGame(d));
+  socket.on("stem_break", onStemBreak);
   socket.on("stem_revealed", (d) => {
+    clearInterval(mpBreakId);
     mpTotalStems = d.total_stems;
     mpRevealStem(d.stems_revealed);
     mpStartCountdown(d.timer);
-    mpResetSkip();   // a new stem dropped — clear our skip vote
+    mpResetSkip();
+    // Resume from the top so everyone hears all revealed stems together.
+    if (mpResumeAfterBreak || isPlaying) {
+      mpResumeAfterBreak = false;
+      startOffset = 0;
+      mpTryAutoplay();
+    }
   });
   socket.on("skip_update", onSkipUpdate);
   socket.on("last_call", onLastCall);
@@ -283,6 +293,7 @@ function mpLeave() {
   clearInterval(mpCountdownId);
   clearInterval(mpIntermissionId);
   clearInterval(mpGraceId);
+  clearInterval(mpBreakId);
   if (typeof masterStop === "function") masterStop();
   showScreen("screen-landing");
 }
@@ -294,6 +305,7 @@ async function mpStartGame(d) {
 
   clearInterval(mpIntermissionId);
   clearInterval(mpGraceId);
+  clearInterval(mpBreakId);
   mpResetSkip();
   $("mp-timer").classList.remove("last-call");
   sessionId = d.session_id;
@@ -307,6 +319,7 @@ async function mpStartGame(d) {
   // decodes (we need the song duration to centre the clip).
   stopAllSources();
   isPlaying = false;
+  mpResumeAfterBreak = false;
   startOffset = 0;
   startCtxTime = 0;
   loopRegion = null;
@@ -420,6 +433,25 @@ function mpStartCountdown(seconds) {
   }, 1000);
 }
 
+// Silent break between stems: stop the music, count down, then stem_revealed resumes it.
+function onStemBreak(d) {
+  clearInterval(mpCountdownId);
+  mpResumeAfterBreak = isPlaying;
+  if (typeof masterStop === "function") masterStop();
+  $("btn-mp-skip").disabled = true;
+  let left = d.seconds || 3;
+  const el = $("mp-timer");
+  el.classList.remove("last-call");
+  const render = () => { el.innerHTML = `Next stem in <strong>${left}s</strong>`; };
+  render();
+  clearInterval(mpBreakId);
+  mpBreakId = setInterval(() => {
+    left = Math.max(0, left - 1);
+    render();
+    if (left === 0) clearInterval(mpBreakId);
+  }, 1000);
+}
+
 function renderCountdown() {
   const el = $("mp-timer");
   if (stemsRevealed >= mpTotalStems) {
@@ -427,7 +459,7 @@ function renderCountdown() {
       ? `Last chance — <strong>${mpCountdownLeft}s</strong>`
       : `Time's up!`;
   } else {
-    el.innerHTML = `Next stem in <strong>${mpCountdownLeft}s</strong>`;
+    el.innerHTML = `🎧 Listen — <strong>${mpCountdownLeft}s</strong>`;
   }
 }
 
@@ -468,6 +500,7 @@ function onGameAborted() {
   clearInterval(mpCountdownId);
   clearInterval(mpIntermissionId);
   clearInterval(mpGraceId);
+  clearInterval(mpBreakId);
   if (typeof masterStop === "function") masterStop();
   document.body.classList.remove("mp");
   window.mpActive = false;
@@ -501,15 +534,19 @@ function onSkipUpdate(d) {
 }
 
 function onLastCall(d) {
-  // Reveal phase is over; give a few seconds where guesses still count.
   clearInterval(mpCountdownId);
+  if (typeof masterStop === "function") masterStop();
   const btn = $("btn-mp-skip");
   btn.disabled = true;
   btn.classList.remove("voted");
   let left = d.seconds || 5;
   const el = $("mp-timer");
   el.classList.add("last-call");
-  const render = () => { el.innerHTML = `⏰ Last guesses — <strong>${left}s</strong>`; };
+  const render = () => {
+    el.innerHTML = d.is_final
+      ? `⏰ Last guesses — <strong>${left}s</strong>`
+      : `Next round in <strong>${left}s</strong>`;
+  };
   render();
   clearInterval(mpGraceId);
   mpGraceId = setInterval(() => {
@@ -590,6 +627,7 @@ function onRoundOver(d) {
   clearInterval(mpCountdownId);
   clearInterval(mpIntermissionId);
   clearInterval(mpGraceId);
+  clearInterval(mpBreakId);
   $("mp-timer").classList.remove("last-call");
   if (typeof masterStop === "function") masterStop();
 
