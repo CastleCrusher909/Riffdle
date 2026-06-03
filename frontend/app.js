@@ -282,18 +282,19 @@ async function shareSong(btn) {
     : "Can you guess this Riffdle song?";
   const original = btn.textContent;
   const ok = () => { btn.textContent = "✓ Link copied!"; setTimeout(() => (btn.textContent = original), 2000); };
+  const message = `${text}\n${url}`;   // so the pasted message includes the challenge text
   try {
     if (navigator.share) {
       // Mobile native share sheet
       await navigator.share({ title: "Riffdle", text, url });
     } else {
-      await navigator.clipboard.writeText(url);
+      await navigator.clipboard.writeText(message);
       ok();
     }
   } catch (_) {
     // Clipboard blocked (or share dismissed) — fall back to a prompt
-    try { await navigator.clipboard.writeText(url); ok(); }
-    catch (__) { window.prompt("Copy this link to challenge a friend:", url); }
+    try { await navigator.clipboard.writeText(message); ok(); }
+    catch (__) { window.prompt("Copy this to challenge a friend:", message); }
   }
 }
 
