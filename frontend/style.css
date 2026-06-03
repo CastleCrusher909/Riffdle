@@ -415,6 +415,11 @@ body.mp #game-stats { display: none; }
   text-align: center;
   line-height: 1.4;
 }
+/* Single-player can scrub → show the slide instruction; multiplayer loops a
+   fixed clip → show the bare warning instead. */
+.seek-tip .tip-warn { display: none; }
+body.mp .seek-tip .tip-scrub { display: none; }
+body.mp .seek-tip .tip-warn { display: inline; }
 
 .challenge-note {
   margin: 0.4rem auto 0;
