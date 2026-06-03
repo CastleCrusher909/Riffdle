@@ -9,6 +9,8 @@ let activeStemOrder = [];
 let sessionId = null;
 let currentVideoId = null;   // video id of the song in play (for sharing)
 let playerSolveStems = null; // stems revealed when the player got the title (or null)
+let challengeScore = null;   // a friend's score to beat (from a shared link)
+let challengeForVid = null;  // the video id that challenge score applies to
 let stemsRevealed = 0;
 let score = 0;
 let gameOver = false;
@@ -265,20 +267,25 @@ document.getElementById("btn-random").addEventListener("click", async () => {
 // Builds a link like  https://riffdle.onrender.com/?song=<token>  where token is
 // the base64'd video id (so the answer isn't one click away in the URL). Opening
 // that link auto-starts the same cached song for the friend to play.
-function songShareUrl(videoId) {
+function songShareUrl(videoId, score) {
   const token = encodeURIComponent(btoa(videoId));
-  return `${location.origin}/?song=${token}`;
+  let url = `${location.origin}/?song=${token}`;
+  if (score > 0) url += `&s=${score}`;   // friend will see this as a score to beat
+  return url;
 }
 
 async function shareSong(btn) {
   if (!currentVideoId) return;
-  const url = songShareUrl(currentVideoId);
+  const url = songShareUrl(currentVideoId, score);
+  const text = score > 0
+    ? `I scored ${score} on this Riffdle song — can you beat it?`
+    : "Can you guess this Riffdle song?";
   const original = btn.textContent;
   const ok = () => { btn.textContent = "✓ Link copied!"; setTimeout(() => (btn.textContent = original), 2000); };
   try {
     if (navigator.share) {
       // Mobile native share sheet
-      await navigator.share({ title: "Riffdle", text: "Can you guess this Riffdle song?", url });
+      await navigator.share({ title: "Riffdle", text, url });
     } else {
       await navigator.clipboard.writeText(url);
       ok();
@@ -301,6 +308,8 @@ document.getElementById("btn-share-result").addEventListener("click", (e) => sha
   let videoId = null;
   try { videoId = atob(decodeURIComponent(token)); } catch (_) {}
   if (videoId && /^[A-Za-z0-9_-]{11}$/.test(videoId)) {
+    const s = parseInt(params.get("s"), 10);
+    if (!isNaN(s) && s > 0) { challengeScore = s; challengeForVid = videoId; }
     startGame(watchUrl(videoId));
   }
 })();
@@ -575,7 +584,19 @@ function initGame(stems) {
   document.getElementById("btn-next-stem").onclick = revealNextStem;
   showScreen("screen-game");
   renderGameStats();
+  renderChallengeNote();
   revealNextStem();
+}
+
+// Banner shown when you opened a friend's shared link with a score to beat.
+function renderChallengeNote() {
+  const el = document.getElementById("challenge-note");
+  el.classList.add("hidden");
+  el.innerHTML = "";
+  if (challengeScore != null && challengeForVid === currentVideoId && !window.mpActive) {
+    el.innerHTML = `🎯 A friend scored <strong>${challengeScore}</strong> — beat it!`;
+    el.classList.remove("hidden");
+  }
 }
 
 // Show the song's difficulty live while playing (aggregate only — no answer).
@@ -749,6 +770,13 @@ async function renderSongStats() {
   el.innerHTML = "";
   if (!currentVideoId) return;
   const parts = [];
+  // Challenge result vs the friend who shared this song
+  if (challengeScore != null && challengeForVid === currentVideoId) {
+    const verdict = score > challengeScore ? "🏆 You win!"
+                  : score === challengeScore ? "🤝 Tie!"
+                  : "😅 They win";
+    parts.push(`🎯 Friend: <strong>${challengeScore}</strong> · You: <strong>${score}</strong> — ${verdict}`);
+  }
   if (playerSolveStems !== null) {
     parts.push(`You got it after <strong>${playerSolveStems}</strong> stem${playerSolveStems === 1 ? "" : "s"}.`);
   }

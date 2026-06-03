@@ -407,6 +407,20 @@ body.mp #btn-share { display: none; }
 .game-stats strong { color: var(--accent-lt); font-weight: 600; }
 body.mp #game-stats { display: none; }
 
+.challenge-note {
+  margin: 0.4rem auto 0;
+  max-width: max-content;
+  padding: 0.4rem 0.9rem;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  background: rgba(124, 58, 237, 0.12);
+  color: var(--text);
+  font-size: 0.88rem;
+  text-align: center;
+}
+.challenge-note strong { color: var(--accent-lt); font-weight: 700; }
+body.mp #challenge-note { display: none; }
+
 .result-actions {
   display: flex;
   flex-direction: column;
