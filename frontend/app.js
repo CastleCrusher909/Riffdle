@@ -282,11 +282,12 @@ async function shareSong(btn) {
     : "Can you guess this Riffdle song?";
   const original = btn.textContent;
   const ok = () => { btn.textContent = "✓ Link copied!"; setTimeout(() => (btn.textContent = original), 2000); };
-  const message = `${text}\n${url}`;   // so the pasted message includes the challenge text
+  const message = `${text}\n${url}`;   // so the shared message includes the challenge text
   try {
     if (navigator.share) {
-      // Mobile native share sheet
-      await navigator.share({ title: "Riffdle", text, url });
+      // Put the link INSIDE the text — some targets (e.g. Messages) keep only
+      // the `url` field and drop `text` when both are passed separately.
+      await navigator.share({ title: "Riffdle", text: message });
     } else {
       await navigator.clipboard.writeText(message);
       ok();
