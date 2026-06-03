@@ -405,14 +405,20 @@
       <p id="result-stats" class="result-stats hidden"></p>
       <div id="result-actions" class="result-actions">
         <button id="btn-play-again">Play again</button>
-        <button id="btn-share-result" class="btn-secondary">🔗 Challenge a friend</button>
+        <div class="share-row">
+          <button id="btn-copy-result" class="btn-secondary">🔗 Copy link</button>
+          <button id="btn-share-result" class="btn-secondary">📤 Share</button>
+        </div>
       </div>
 
       <!-- Daily-challenge result (shown instead of the actions above in daily mode) -->
       <div id="daily-result" class="daily-result hidden">
         <div id="daily-grid" class="daily-grid"></div>
         <p id="daily-stats" class="result-stats hidden"></p>
-        <button id="btn-share-daily">📋 Share result</button>
+        <div class="share-row">
+          <button id="btn-copy-daily">📋 Copy</button>
+          <button id="btn-share-daily" class="btn-secondary">📤 Share</button>
+        </div>
         <p id="daily-countdown" class="daily-countdown"></p>
         <button id="btn-daily-home" class="btn-secondary">← Back to menu</button>
       </div>

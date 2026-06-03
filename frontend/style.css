@@ -436,6 +436,12 @@ body.mp #challenge-note { display: none; }
   gap: 0.6rem;
   margin-top: 0.5rem;
 }
+.share-row {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+}
+.share-row button { flex: 1; }
 
 /* ── Stems panel ─────────────────────────────────────────────── */
 .stems-panel {

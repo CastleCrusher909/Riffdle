@@ -279,38 +279,50 @@ function songShareUrl(videoId, score) {
   return url;
 }
 
-async function shareSong(btn) {
-  if (!currentVideoId) return;
+// Copy and Share are distinct: Copy always writes to the clipboard (with
+// confirmation); Share opens the native sheet and does nothing if dismissed.
+async function copyToClipboard(text, btn) {
+  const original = btn.textContent;
+  try {
+    await navigator.clipboard.writeText(text);
+    btn.textContent = "✓ Copied!";
+    setTimeout(() => (btn.textContent = original), 2000);
+  } catch (_) {
+    window.prompt("Copy this:", text);
+  }
+}
+async function nativeShare(text) {
+  try { await navigator.share({ title: "Riffdle", text }); }
+  catch (_) { /* dismissed or unsupported — do nothing */ }
+}
+
+function songShareMessage() {
   const url = songShareUrl(currentVideoId, score);
   let text = score > 0
     ? `I scored ${score} on this Riffdle song — can you beat it?`
     : "Can you guess this Riffdle song?";
-  // After finishing, include the Heardle-style grid
-  if (gameOver) {
+  if (gameOver) {   // include the Heardle-style grid once finished
     const total = activeStemOrder.length || 4;
     text += `\n${emojiGrid(playerSolveStems !== null, playerSolveStems, total)}`;
   }
-  const original = btn.textContent;
-  const ok = () => { btn.textContent = "✓ Link copied!"; setTimeout(() => (btn.textContent = original), 2000); };
-  const message = `${text}\n${url}`;   // so the shared message includes the challenge text
-  try {
-    if (navigator.share) {
-      // Put the link INSIDE the text — some targets (e.g. Messages) keep only
-      // the `url` field and drop `text` when both are passed separately.
-      await navigator.share({ title: "Riffdle", text: message });
-    } else {
-      await navigator.clipboard.writeText(message);
-      ok();
-    }
-  } catch (_) {
-    // Clipboard blocked (or share dismissed) — fall back to a prompt
-    try { await navigator.clipboard.writeText(message); ok(); }
-    catch (__) { window.prompt("Copy this to challenge a friend:", message); }
-  }
+  return `${text}\n${url}`;
 }
 
-document.getElementById("btn-share").addEventListener("click", (e) => shareSong(e.currentTarget));
-document.getElementById("btn-share-result").addEventListener("click", (e) => shareSong(e.currentTarget));
+// Header (mid-game) button: share on mobile, copy on desktop
+document.getElementById("btn-share").addEventListener("click", (e) => {
+  if (!currentVideoId) return;
+  const msg = songShareMessage();
+  if (navigator.share) nativeShare(msg); else copyToClipboard(msg, e.currentTarget);
+});
+// Result screen: explicit Copy + Share
+document.getElementById("btn-copy-result").addEventListener("click", (e) => {
+  if (currentVideoId) copyToClipboard(songShareMessage(), e.currentTarget);
+});
+document.getElementById("btn-share-result").addEventListener("click", (e) => {
+  if (!currentVideoId) return;
+  const msg = songShareMessage();
+  if (navigator.share) nativeShare(msg); else copyToClipboard(msg, e.currentTarget);
+});
 
 // Clicking the in-game Riffdle logo returns to the main menu
 document.getElementById("logo-home").addEventListener("click", () => {
@@ -395,21 +407,19 @@ function enterDailyResult(obj) {
   showScreen("screen-result");
 }
 
-async function shareDaily(btn) {
+function dailyShareTextNow() {
   const saved = localStorage.getItem(dailyKey(dailyNumber));
-  if (!saved) return;
-  const text = dailyShareText(JSON.parse(saved));
-  const original = btn.textContent;
-  const ok = () => { btn.textContent = "✓ Copied!"; setTimeout(() => (btn.textContent = original), 2000); };
-  try {
-    if (navigator.share) await navigator.share({ title: "Riffdle", text });
-    else { await navigator.clipboard.writeText(text); ok(); }
-  } catch (_) {
-    try { await navigator.clipboard.writeText(text); ok(); }
-    catch (__) { window.prompt("Copy your result:", text); }
-  }
+  return saved ? dailyShareText(JSON.parse(saved)) : null;
 }
-document.getElementById("btn-share-daily").addEventListener("click", (e) => shareDaily(e.currentTarget));
+document.getElementById("btn-copy-daily").addEventListener("click", (e) => {
+  const t = dailyShareTextNow();
+  if (t) copyToClipboard(t, e.currentTarget);
+});
+document.getElementById("btn-share-daily").addEventListener("click", (e) => {
+  const t = dailyShareTextNow();
+  if (!t) return;
+  if (navigator.share) nativeShare(t); else copyToClipboard(t, e.currentTarget);
+});
 
 document.getElementById("btn-daily-home").addEventListener("click", () => {
   clearInterval(dailyCountdownId);
