@@ -839,28 +839,32 @@ async function submitGuess() {
     });
     const data = await res.json();
 
-    if (data.result === "correct") {
-      addGuessEntry(data.title, "correct", data.points);
-      score += data.points;
+    // A single guess can land the title, the artist, or both at once.
+    if (data.title_hit) {
+      addGuessEntry(data.title, "correct", data.title_points);
+      score += data.title_points;
       if (playerSolveStems === null) playerSolveStems = stemsRevealed;
-      document.getElementById("score-display").textContent = `Score: ${score}`;
       resultTitle = data.title;
       resultArtist = data.artist;
       titleGuessed = true;
-      if (artistGuessed) {
-        finishGame();
-      } else {
-        document.getElementById("artist-bonus").classList.remove("hidden");
-      }
-    } else if (data.result === "artist") {
-      addGuessEntry(data.artist, "artist", data.points);
-      score += data.points;
-      document.getElementById("score-display").textContent = `Score: ${score}`;
+    }
+    if (data.artist_hit) {
+      addGuessEntry(data.artist, "artist", data.artist_points);
+      score += data.artist_points;
       artistGuessed = true;
-      document.getElementById("artist-bonus").classList.add("hidden");
-      if (titleGuessed) finishGame();
-    } else {
+      resultTitle = resultTitle || data.title;
+      resultArtist = resultArtist || data.artist;
+    }
+    if (!data.title_hit && !data.artist_hit) {
       addGuessEntry(guess, "wrong", 0);
+    }
+
+    document.getElementById("score-display").textContent = `Score: ${score}`;
+    if (titleGuessed && artistGuessed) {
+      document.getElementById("artist-bonus").classList.add("hidden");
+      finishGame();
+    } else if (titleGuessed) {
+      document.getElementById("artist-bonus").classList.remove("hidden");
     }
   } catch (err) {
     console.error(err);

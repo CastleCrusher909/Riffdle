@@ -781,37 +781,39 @@ def submit_guess():
     artist = game["artist"].lower()
     guess_lower = guess.lower()
 
-    matches_title  = is_match(guess_lower, title)
-    matches_artist = is_match(guess_lower, artist)
-
     base_points = max(0, 1000 - (stems_revealed - 1) * 200)
 
-    if matches_title:
-        result = "correct"
-        points = base_points
+    # Title and artist are scored independently, so one guess can land both
+    # (e.g. "September Earth Wind and Fire").
+    title_hit  = is_match(guess_lower, title)  and not game.get("title_guessed")
+    artist_hit = is_match(guess_lower, artist) and not game.get("artist_guessed")
+    title_points  = base_points if title_hit else 0
+    artist_points = base_points // 2 if artist_hit else 0
+
+    if title_hit:
+        game["title_guessed"] = True
         if not game.get("solve_recorded"):
             game["solve_recorded"] = True
             update_stats(game.get("video_id"), solve_stems=stems_revealed)
-    elif matches_artist and not game["artist_guessed"]:
-        result = "artist"
-        points = base_points // 2
+    if artist_hit:
         game["artist_guessed"] = True
-    else:
-        result = "wrong"
-        points = 0
 
+    got_any = title_hit or artist_hit
     game["guesses"].append({
         "guess": guess,
-        "result": result,
+        "result": "correct" if title_hit else ("artist" if artist_hit else "wrong"),
         "stems_revealed": stems_revealed,
-        "points": points,
+        "points": title_points + artist_points,
     })
 
     return jsonify({
-        "result": result,
-        "points": points,
-        "title":  game["title"]  if result in ("correct", "artist") else None,
-        "artist": game["artist"] if result in ("correct", "artist") else None,
+        "title_hit": title_hit,
+        "artist_hit": artist_hit,
+        "title_points": title_points,
+        "artist_points": artist_points,
+        "points": title_points + artist_points,
+        "title":  game["title"]  if got_any else None,
+        "artist": game["artist"] if got_any else None,
     })
 
 
@@ -1529,12 +1531,16 @@ def on_guess(data):
         return
     got = room["round_guessed"].setdefault(sid, {"title": False, "artist": False})
 
-    result, points = "wrong", 0
     order_bonus = streak_bonus = 0
     rank = -1
-    if is_match(g, title) and not got["title"]:
+    title_points = artist_points = 0
+
+    # Title and artist score independently — one guess can land both.
+    title_hit  = is_match(g, title)  and not got["title"]
+    artist_hit = is_match(g, artist) and not got["artist"]
+
+    if title_hit:
         got["title"] = True
-        result = "correct"
         update_stats(session.get("video_id"), solve_stems=stems_revealed)
 
         # Order bonus: reward beating others to the title (multiplayer only).
@@ -1547,33 +1553,42 @@ def on_guess(data):
         player["streak"] = player.get("streak", 0) + 1
         streak_bonus = min(player["streak"] - 1, STREAK_CAP) * STREAK_STEP
 
-        points = base + order_bonus + streak_bonus
-    elif is_match(g, artist) and not got["artist"]:
-        result, points = "artist", base // 2
+        title_points = base + order_bonus + streak_bonus
+
+    if artist_hit:
         got["artist"] = True
+        artist_points = base // 2
+
+    points = title_points + artist_points
 
     if points:
         player["score"] += points
-        first = result == "correct" and rank == 0 and len(room["players"]) > 1
-        # Announce that someone scored — never leak the actual guess text
-        socketio.emit("player_guessed", {
-            "name": player["name"],
-            "what": "title" if result == "correct" else "artist",
-            "first": first,
-            "streak": player.get("streak", 0) if result == "correct" else 0,
-        }, room=code)
+        # Announce each thing scored — never leak the actual guess text
+        if title_hit:
+            socketio.emit("player_guessed", {
+                "name": player["name"], "what": "title",
+                "first": rank == 0 and len(room["players"]) > 1,
+                "streak": player.get("streak", 0),
+            }, room=code)
+        if artist_hit:
+            socketio.emit("player_guessed", {
+                "name": player["name"], "what": "artist", "first": False, "streak": 0,
+            }, room=code)
         socketio.emit("scores_update", {"leaderboard": leaderboard(room)}, room=code)
 
     # Private result back to just this guesser
     emit("guess_result", {
-        "result": result,
+        "result": "correct" if title_hit else ("artist" if artist_hit else "wrong"),
+        "title_hit": title_hit,
+        "artist_hit": artist_hit,
         "points": points,
-        "base": base if result != "wrong" else 0,
+        "title_points": title_points,
+        "artist_points": artist_points,
         "order_bonus": order_bonus,
         "streak_bonus": streak_bonus,
-        "streak": player.get("streak", 0) if result == "correct" else 0,
-        "title": session["title"] if result != "wrong" else None,
-        "artist": session["artist"] if result != "wrong" else None,
+        "streak": player.get("streak", 0) if title_hit else 0,
+        "title": session["title"] if (title_hit or artist_hit) else None,
+        "artist": session["artist"] if (title_hit or artist_hit) else None,
     })
 
     # Early finish: if everyone has both title + artist, end now instead of

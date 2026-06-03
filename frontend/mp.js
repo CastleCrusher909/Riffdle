@@ -562,26 +562,28 @@ function updateMpScoreDisplay() {
 }
 
 function onGuessResult(d) {
-  if (d.result === "correct") {
+  // One guess can land the title, the artist, or both at once.
+  if (d.title_hit) {
     mpGotTitle = true;
     mpMyStreak = d.streak || 0;
-    addGuessEntry(d.title, "correct", d.points);
-    mpMyScore += d.points;
-    updateMpScoreDisplay();
-    // Personal bonus note in the feed
+    addGuessEntry(d.title, "correct", d.title_points);
+    mpMyScore += d.title_points;
     const bonuses = [];
     if (d.order_bonus) bonuses.push(`🥇 +${d.order_bonus} first`);
     if (d.streak_bonus) bonuses.push(`🔥 +${d.streak_bonus} streak ×${d.streak}`);
     if (bonuses.length) mpAddFeed(`<span class="feed-you">You: ${bonuses.join(" · ")}</span>`);
-    $("artist-bonus").classList.toggle("hidden", mpGotArtist);
-  } else if (d.result === "artist") {
+  }
+  if (d.artist_hit) {
     mpGotArtist = true;
-    addGuessEntry(d.artist, "artist", d.points);
-    mpMyScore += d.points;
-    updateMpScoreDisplay();
-    if (mpGotTitle) $("artist-bonus").classList.add("hidden");
-  } else {
+    addGuessEntry(d.artist, "artist", d.artist_points);
+    mpMyScore += d.artist_points;
+  }
+  if (!d.title_hit && !d.artist_hit) {
     addGuessEntry(mpLastGuess || "—", "wrong", 0);
+  }
+  if (d.title_hit || d.artist_hit) {
+    updateMpScoreDisplay();
+    $("artist-bonus").classList.toggle("hidden", mpGotArtist || !mpGotTitle);
   }
 }
 
