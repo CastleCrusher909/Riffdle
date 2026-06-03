@@ -857,6 +857,13 @@ async function submitGuess() {
     }
     if (!data.title_hit && !data.artist_hit) {
       addGuessEntry(guess, "wrong", 0);
+    } else if (data.title_hit && !data.artist_hit && !artistGuessed) {
+      // Got the title but the rest of the guess (a wrong artist attempt) missed
+      const left = leftoverWords(guess, data.title);
+      if (left) addGuessEntry(left, "wrong", 0, "wrong artist");
+    } else if (data.artist_hit && !data.title_hit && !titleGuessed) {
+      const left = leftoverWords(guess, data.artist);
+      if (left) addGuessEntry(left, "wrong", 0, "wrong song");
     }
 
     document.getElementById("score-display").textContent = `Score: ${score}`;
@@ -876,12 +883,13 @@ function finishGame() {
   setTimeout(() => showResult(resultTitle, resultArtist), 600);
 }
 
-function addGuessEntry(text, result, pts) {
+function addGuessEntry(text, result, pts, hint) {
   const log = document.getElementById("guess-log");
   const el = document.createElement("div");
   el.className = `guess-entry ${result}`;
   const badge = result === "correct" ? "✓" : result === "artist" ? "½" : "✗";
-  const label = result === "artist" ? `<span class="guess-hint">correct artist</span>` : "";
+  const hintText = hint || (result === "artist" ? "correct artist" : "");
+  const label = hintText ? `<span class="guess-hint">${hintText}</span>` : "";
   el.innerHTML = `
     <span class="guess-badge">${badge}</span>
     <span class="guess-text">${escapeHtml(text)}</span>
@@ -889,6 +897,15 @@ function addGuessEntry(text, result, pts) {
     ${pts > 0 ? `<span class="guess-pts">+${pts}</span>` : ""}
   `;
   log.prepend(el);
+}
+
+// The leftover words of a guess after removing the matched title/artist —
+// i.e. the part the player got wrong in a combined guess.
+function leftoverWords(guess, matched) {
+  const norm = (s) => (s || "").toLowerCase().replace(/&/g, " and ")
+    .replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
+  const m = new Set(norm(matched).split(" ").filter(Boolean));
+  return norm(guess).split(" ").filter((w) => w && !m.has(w)).join(" ").trim();
 }
 
 function escapeHtml(str) {

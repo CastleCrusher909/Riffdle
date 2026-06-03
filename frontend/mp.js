@@ -580,6 +580,12 @@ function onGuessResult(d) {
   }
   if (!d.title_hit && !d.artist_hit) {
     addGuessEntry(mpLastGuess || "—", "wrong", 0);
+  } else if (d.title_hit && !d.artist_hit && !mpGotArtist) {
+    const left = leftoverWords(mpLastGuess, d.title);
+    if (left) addGuessEntry(left, "wrong", 0, "wrong artist");
+  } else if (d.artist_hit && !d.title_hit && !mpGotTitle) {
+    const left = leftoverWords(mpLastGuess, d.artist);
+    if (left) addGuessEntry(left, "wrong", 0, "wrong song");
   }
   if (d.title_hit || d.artist_hit) {
     updateMpScoreDisplay();
