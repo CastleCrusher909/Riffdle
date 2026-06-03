@@ -368,7 +368,7 @@ function dailyGrid(obj) {
 function dailyShareText(obj) {
   const total = obj.total || 4;
   const res = obj.solved ? `${obj.stems}/${total} stems` : "X";
-  return `🎸 Riffdle Daily #${obj.number} — ${res}\n${dailyGrid(obj)}\n${location.origin}`;
+  return `🎸 Riffdle Daily #${obj.number} — Score ${obj.score} (${res})\n${dailyGrid(obj)}\n${location.origin}`;
 }
 
 function enterDailyResult(obj) {
