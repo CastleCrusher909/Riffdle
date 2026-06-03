@@ -5,6 +5,7 @@ import time
 import uuid
 import json
 import random
+from datetime import date, datetime, timezone
 import shutil
 import subprocess
 import threading
@@ -813,6 +814,28 @@ def catalog():
         songs = _seed_pool([], [])   # fallback: songs.json ∩ cache index
     songs = sorted(songs, key=lambda s: s.get("title", "").lower())
     return jsonify({"cache_only": CACHE_ONLY, "songs": songs})
+
+
+DAILY_LAUNCH = date(2026, 6, 3)   # Daily #1
+DAILY_SEED = 99173                # fixed → same shuffle for everyone
+
+
+@app.route("/api/daily")
+def daily():
+    """Today's song — the same for everyone, no repeats until the whole catalog
+    cycles. Returns the daily number and video id (never the title)."""
+    pool = _get_catalog()
+    if not pool:
+        pool = _seed_pool([], [])
+    pool = [s for s in pool if s.get("video_id")]
+    if not pool:
+        return jsonify({"error": "No songs cached yet"}), 404
+
+    day_number = max(0, (datetime.now(timezone.utc).date() - DAILY_LAUNCH).days)
+    order = sorted(pool, key=lambda s: s["video_id"])
+    random.Random(DAILY_SEED).shuffle(order)
+    song = order[day_number % len(order)]
+    return jsonify({"number": day_number + 1, "video_id": song["video_id"]})
 
 
 @app.route("/api/stats/<video_id>")

@@ -11,6 +11,9 @@ let currentVideoId = null;   // video id of the song in play (for sharing)
 let playerSolveStems = null; // stems revealed when the player got the title (or null)
 let challengeScore = null;   // a friend's score to beat (from a shared link)
 let challengeForVid = null;  // the video id that challenge score applies to
+let dailyMode = false;       // true while playing the daily challenge
+let dailyNumber = null;      // today's daily number
+let dailyCountdownId = null;
 let stemsRevealed = 0;
 let score = 0;
 let gameOver = false;
@@ -169,9 +172,11 @@ function extractVideoId(url) {
   return m ? m[1] : null;
 }
 
-async function startGame(url) {
+async function startGame(url, opts = {}) {
   currentVideoId = extractVideoId(url);   // remembered for the Share button
   playerSolveStems = null;
+  dailyMode = !!opts.daily;
+  dailyNumber = opts.daily ? opts.number : null;
   const errEl = document.getElementById("landing-error");
   errEl.classList.add("hidden");
   document.getElementById("search-results").classList.add("hidden");
@@ -301,6 +306,112 @@ async function shareSong(btn) {
 
 document.getElementById("btn-share").addEventListener("click", (e) => shareSong(e.currentTarget));
 document.getElementById("btn-share-result").addEventListener("click", (e) => shareSong(e.currentTarget));
+
+// ── Daily Challenge ───────────────────────────────────────────
+const dailyKey = (n) => `riffdle-daily-${n}`;
+
+async function startDaily() {
+  const btn = document.getElementById("btn-daily");
+  const errEl = document.getElementById("landing-error");
+  errEl.classList.add("hidden");
+  btn.disabled = true;
+  try {
+    const d = await fetch(`${API}/daily`).then((r) => r.json());
+    if (!d.video_id) throw new Error(d.error || "No daily yet");
+    dailyNumber = d.number;   // so Share works even when viewing a saved result
+    const saved = localStorage.getItem(dailyKey(d.number));
+    if (saved) {
+      // Already played today — just show the saved result (no replay)
+      enterDailyResult(JSON.parse(saved));
+    } else {
+      startGame(watchUrl(d.video_id), { daily: true, number: d.number });
+    }
+  } catch (err) {
+    setError(errEl, `Couldn't load the daily: ${err.message}`);
+  } finally {
+    btn.disabled = false;
+  }
+}
+document.getElementById("btn-daily").addEventListener("click", startDaily);
+
+function finishDaily(title, artist) {
+  const total = activeStemOrder.length || 4;
+  const obj = {
+    number: dailyNumber,
+    solved: playerSolveStems !== null,
+    stems: playerSolveStems,
+    score,
+    title,
+    artist,
+    total,
+  };
+  try { localStorage.setItem(dailyKey(dailyNumber), JSON.stringify(obj)); } catch (_) {}
+  enterDailyResult(obj);
+}
+
+function dailyGrid(obj) {
+  const total = obj.total || 4;
+  if (!obj.solved) return "🟥".repeat(total);
+  const k = obj.stems;
+  return "🟪".repeat(Math.max(0, k - 1)) + "🟩" + "⬛".repeat(Math.max(0, total - k));
+}
+
+function dailyShareText(obj) {
+  const total = obj.total || 4;
+  const res = obj.solved ? `${obj.stems}/${total} stems` : "X";
+  return `🎸 Riffdle Daily #${obj.number} — ${res}\n${dailyGrid(obj)}\n${location.origin}`;
+}
+
+function enterDailyResult(obj) {
+  if (typeof masterStop === "function") masterStop();
+  document.getElementById("result-heading").textContent = `🗓️ Daily Riffdle #${obj.number}`;
+  document.getElementById("result-title").textContent = obj.title || "—";
+  document.getElementById("result-artist").textContent = obj.artist ? `by ${obj.artist}` : "";
+  document.getElementById("result-score").textContent = obj.score;
+  document.getElementById("result-stats").classList.add("hidden");
+  document.getElementById("result-actions").classList.add("hidden");
+  const dr = document.getElementById("daily-result");
+  dr.classList.remove("hidden");
+  document.getElementById("daily-grid").innerHTML =
+    `${dailyGrid(obj)}<div class="daily-grid-sub">${obj.solved ? "Solved in " + obj.stems + "/" + obj.total + " stems" : "Not guessed"}</div>`;
+  startDailyCountdown();
+  showScreen("screen-result");
+}
+
+async function shareDaily(btn) {
+  const saved = localStorage.getItem(dailyKey(dailyNumber));
+  if (!saved) return;
+  const text = dailyShareText(JSON.parse(saved));
+  const original = btn.textContent;
+  const ok = () => { btn.textContent = "✓ Copied!"; setTimeout(() => (btn.textContent = original), 2000); };
+  try {
+    if (navigator.share) await navigator.share({ title: "Riffdle", text });
+    else { await navigator.clipboard.writeText(text); ok(); }
+  } catch (_) {
+    try { await navigator.clipboard.writeText(text); ok(); }
+    catch (__) { window.prompt("Copy your result:", text); }
+  }
+}
+document.getElementById("btn-share-daily").addEventListener("click", (e) => shareDaily(e.currentTarget));
+
+document.getElementById("btn-daily-home").addEventListener("click", () => {
+  clearInterval(dailyCountdownId);
+  showScreen("screen-landing");
+});
+
+function startDailyCountdown() {
+  const el = document.getElementById("daily-countdown");
+  clearInterval(dailyCountdownId);
+  const tick = () => {
+    const now = new Date();
+    const next = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1));
+    let s = Math.max(0, Math.floor((next - now) / 1000));
+    const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
+    el.textContent = `⏳ Next Riffdle in ${h}h ${m}m ${sec}s`;
+  };
+  tick();
+  dailyCountdownId = setInterval(tick, 1000);
+}
 
 // If the page was opened with ?song=<token>, auto-start that cached song.
 (() => {
@@ -758,6 +869,11 @@ async function showAnswer() {
 
 function showResult(title, artist) {
   masterStop();
+  if (dailyMode) { finishDaily(title, artist); return; }
+  // Normal single-player result (reset anything the daily view may have toggled)
+  document.getElementById("result-heading").textContent = "🎉 Song Revealed!";
+  document.getElementById("daily-result").classList.add("hidden");
+  document.getElementById("result-actions").classList.remove("hidden");
   document.getElementById("result-title").textContent = title || "—";
   document.getElementById("result-artist").textContent = artist ? `by ${artist}` : "";
   document.getElementById("result-score").textContent = score;

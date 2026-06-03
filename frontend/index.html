@@ -50,6 +50,11 @@
     <div class="hero">
       <h1 class="logo">🎸 Riffdle</h1>
       <p class="tagline">Guess the song — one stem at a time.</p>
+
+      <button id="btn-daily" class="btn-daily">🗓️ Daily Challenge</button>
+
+      <div class="divider divider-top"><span>or play any song</span></div>
+
       <div class="url-form">
         <input
           id="yt-url"
@@ -389,16 +394,24 @@
   <!-- ── Result ────────────────────────────────────────────────── -->
   <div id="screen-result" class="screen">
     <div class="result-box">
-      <h2>🎉 Song Revealed!</h2>
+      <h2 id="result-heading">🎉 Song Revealed!</h2>
       <div class="answer-card">
         <p class="answer-title" id="result-title"></p>
         <p class="answer-artist" id="result-artist"></p>
       </div>
       <p class="final-score">Final score: <strong id="result-score"></strong></p>
       <p id="result-stats" class="result-stats hidden"></p>
-      <div class="result-actions">
+      <div id="result-actions" class="result-actions">
         <button id="btn-play-again">Play again</button>
         <button id="btn-share-result" class="btn-secondary">🔗 Challenge a friend</button>
+      </div>
+
+      <!-- Daily-challenge result (shown instead of the actions above in daily mode) -->
+      <div id="daily-result" class="daily-result hidden">
+        <div id="daily-grid" class="daily-grid"></div>
+        <button id="btn-share-daily">📋 Share result</button>
+        <p id="daily-countdown" class="daily-countdown"></p>
+        <button id="btn-daily-home" class="btn-secondary">← Back to menu</button>
       </div>
     </div>
   </div>

@@ -632,6 +632,44 @@ body.mp #challenge-note { display: none; }
 .btn-mp { background: var(--surface2); border: 1px solid var(--accent); color: var(--accent-lt); width: 100%; }
 .btn-mp:hover { background: var(--accent); color: #fff; }
 
+/* ── Daily Challenge ─────────────────────────────────────────── */
+.btn-daily {
+  width: 100%;
+  font-size: 1.1rem;
+  padding: 0.9rem 1.4rem;
+  background: linear-gradient(135deg, var(--accent-lt), #c084fc);
+  color: #fff;
+  box-shadow: 0 4px 18px rgba(124, 58, 237, 0.35);
+}
+.btn-daily:hover { background: linear-gradient(135deg, #c084fc, var(--accent-lt)); }
+.divider-top { margin-top: 1.25rem; }
+
+.daily-result {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+.daily-grid {
+  font-size: 1.7rem;
+  letter-spacing: 0.15rem;
+  line-height: 1.4;
+  text-align: center;
+  margin: 0;
+}
+.daily-grid-sub {
+  font-size: 0.9rem;
+  letter-spacing: normal;
+  color: var(--muted);
+  margin-top: 0.4rem;
+}
+.daily-countdown {
+  color: var(--muted);
+  font-size: 0.9rem;
+  margin: 0;
+}
+
 /* "Play with friends" entry — match the random section's spacing */
 .mp-entry {
   margin-top: 1.5rem;
