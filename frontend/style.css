@@ -385,6 +385,25 @@ button:active { transform: scale(0.97); }
   font-weight: 600;
   color: var(--accent-lt);
 }
+.btn-share {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0.4rem 0.8rem;
+  border-radius: var(--radius);
+}
+.btn-share:hover { background: var(--surface2); border-color: var(--accent); }
+/* Sharing is a single-player action; multiplayer rounds are host-driven */
+body.mp #btn-share { display: none; }
+
+.result-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-top: 0.5rem;
+}
 
 /* ── Stems panel ─────────────────────────────────────────────── */
 .stems-panel {

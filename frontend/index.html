@@ -301,6 +301,7 @@
   <div id="screen-game" class="screen">
     <header class="game-header">
       <span class="logo-sm">🎸 Riffdle</span>
+      <button id="btn-share" class="btn-share" title="Copy a link to challenge a friend with this song">🔗 Share</button>
       <span id="score-display">Score: 0</span>
     </header>
 
@@ -389,7 +390,10 @@
         <p class="answer-artist" id="result-artist"></p>
       </div>
       <p class="final-score">Final score: <strong id="result-score"></strong></p>
-      <button id="btn-play-again">Play again</button>
+      <div class="result-actions">
+        <button id="btn-play-again">Play again</button>
+        <button id="btn-share-result" class="btn-secondary">🔗 Challenge a friend</button>
+      </div>
     </div>
   </div>
 

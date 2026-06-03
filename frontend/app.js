@@ -7,6 +7,7 @@ const ALL_STEMS = ["drums", "bass", "melody", "vocals"];
 let activeStemOrder = [];
 
 let sessionId = null;
+let currentVideoId = null;   // video id of the song in play (for sharing)
 let stemsRevealed = 0;
 let score = 0;
 let gameOver = false;
@@ -160,7 +161,13 @@ function renderSearchResults(results) {
   el.classList.remove("hidden");
 }
 
+function extractVideoId(url) {
+  const m = String(url).match(/(?:v=|youtu\.be\/|\/shorts\/|\/embed\/)([A-Za-z0-9_-]{11})/);
+  return m ? m[1] : null;
+}
+
 async function startGame(url) {
+  currentVideoId = extractVideoId(url);   // remembered for the Share button
   const errEl = document.getElementById("landing-error");
   errEl.classList.add("hidden");
   document.getElementById("search-results").classList.add("hidden");
@@ -251,6 +258,50 @@ document.getElementById("btn-random").addEventListener("click", async () => {
     btn.disabled = false;
   }
 });
+
+// ── Share a song with a friend ────────────────────────────────
+// Builds a link like  https://riffdle.onrender.com/?song=<token>  where token is
+// the base64'd video id (so the answer isn't one click away in the URL). Opening
+// that link auto-starts the same cached song for the friend to play.
+function songShareUrl(videoId) {
+  const token = encodeURIComponent(btoa(videoId));
+  return `${location.origin}/?song=${token}`;
+}
+
+async function shareSong(btn) {
+  if (!currentVideoId) return;
+  const url = songShareUrl(currentVideoId);
+  const original = btn.textContent;
+  const ok = () => { btn.textContent = "✓ Link copied!"; setTimeout(() => (btn.textContent = original), 2000); };
+  try {
+    if (navigator.share) {
+      // Mobile native share sheet
+      await navigator.share({ title: "Riffdle", text: "Can you guess this Riffdle song?", url });
+    } else {
+      await navigator.clipboard.writeText(url);
+      ok();
+    }
+  } catch (_) {
+    // Clipboard blocked (or share dismissed) — fall back to a prompt
+    try { await navigator.clipboard.writeText(url); ok(); }
+    catch (__) { window.prompt("Copy this link to challenge a friend:", url); }
+  }
+}
+
+document.getElementById("btn-share").addEventListener("click", (e) => shareSong(e.currentTarget));
+document.getElementById("btn-share-result").addEventListener("click", (e) => shareSong(e.currentTarget));
+
+// If the page was opened with ?song=<token>, auto-start that cached song.
+(() => {
+  const params = new URLSearchParams(location.search);
+  const token = params.get("song");
+  if (!token || params.get("room")) return;   // ?room is handled by multiplayer
+  let videoId = null;
+  try { videoId = atob(decodeURIComponent(token)); } catch (_) {}
+  if (videoId && /^[A-Za-z0-9_-]{11}$/.test(videoId)) {
+    startGame(watchUrl(videoId));
+  }
+})();
 
 // ── Request a song ────────────────────────────────────────────
 // Lets players ask for an uncached song; the owner reviews these later
