@@ -249,20 +249,39 @@ def fuzzy_match(a: str, b: str, threshold: float = 0.75) -> bool:
     return SequenceMatcher(None, a, b).ratio() >= threshold
 
 
+def _loose(s: str) -> str:
+    """Normalize for forgiving comparison: '&'->'and', drop punctuation
+    (apostrophes, periods like 'D.A.N.C.E.', etc.), collapse whitespace.
+    So 'earth wind and fire' == 'Earth Wind & Fire'."""
+    s = s.lower().replace("&", " and ")
+    s = re.sub(r"[^a-z0-9]+", " ", s)
+    return re.sub(r"\s+", " ", s).strip()
+
+
 def is_match(guess: str, target: str) -> bool:
     """
     True if guess meaningfully matches target.
     Parentheticals are stripped from the target before comparing so that
     "(From '8 Mile' Soundtrack)" or "(Radio Edit)" don't inflate the length
-    and block correct guesses.
+    and block correct guesses. Both sides are normalized (& vs and, punctuation,
+    spacing) so "earth wind and fire" matches "Earth Wind & Fire".
     Substring matches require the guess to cover at least 60% of the stripped
     target so that single words from long titles don't count.
     The reverse direction (target inside a longer guess) is always fine.
     """
     clean = re.sub(r"\s*[\(\[].*?[\)\]]", "", target).strip()
-    if guess in clean:
-        return len(guess) >= len(clean) * 0.6
-    return clean in guess or fuzzy_match(guess, clean)
+    g = _loose(guess)
+    c = _loose(clean)
+    if not g or not c:
+        return False
+    gt, ct = g.replace(" ", ""), c.replace(" ", "")   # space-insensitive form (e.g. D.A.N.C.E.)
+    if gt == ct:
+        return True
+    if gt in ct or g in c:                            # guess inside target — needs to cover most of it
+        return len(gt) >= len(ct) * 0.6
+    if ct in gt or c in g:                            # target inside a longer guess — always fine
+        return True
+    return fuzzy_match(g, c)
 
 
 def clean_title(title: str, artist: str) -> str:
