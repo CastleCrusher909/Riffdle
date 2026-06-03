@@ -284,6 +284,23 @@ def is_match(guess: str, target: str) -> bool:
     return fuzzy_match(g, c)
 
 
+# Split a credit string into individually-named performers. Splits on
+# feat./ft./featuring and commas/slashes — but NOT '&' (so band names like
+# "Earth Wind & Fire" or "Hall & Oates" stay whole).
+_FEAT_SPLIT = re.compile(r"\s+(?:feat\.?|ft\.?|featuring)\s+|\s*[,/;]\s*", re.IGNORECASE)
+
+
+def artist_match(guess: str, artist: str) -> bool:
+    """Match the artist, accepting any one credited performer for featured
+    collabs — e.g. 'jay z' or 'beyonce' both match 'Beyoncé ft. Jay-Z'."""
+    if is_match(guess, artist):
+        return True
+    parts = [p.strip() for p in _FEAT_SPLIT.split(artist) if p.strip()]
+    if len(parts) > 1:
+        return any(len(p) >= 3 and is_match(guess, p) for p in parts)
+    return False
+
+
 def clean_title(title: str, artist: str) -> str:
     """Strip leading 'Artist - ' or 'Artist: ' from titles that YouTube includes."""
     for sep in (" - ", ": "):
@@ -785,8 +802,8 @@ def submit_guess():
 
     # Title and artist are scored independently, so one guess can land both
     # (e.g. "September Earth Wind and Fire").
-    title_hit  = is_match(guess_lower, title)  and not game.get("title_guessed")
-    artist_hit = is_match(guess_lower, artist) and not game.get("artist_guessed")
+    title_hit  = is_match(guess_lower, title)      and not game.get("title_guessed")
+    artist_hit = artist_match(guess_lower, artist) and not game.get("artist_guessed")
     title_points  = base_points if title_hit else 0
     artist_points = base_points // 2 if artist_hit else 0
 
@@ -1536,8 +1553,8 @@ def on_guess(data):
     title_points = artist_points = 0
 
     # Title and artist score independently — one guess can land both.
-    title_hit  = is_match(g, title)  and not got["title"]
-    artist_hit = is_match(g, artist) and not got["artist"]
+    title_hit  = is_match(g, title)      and not got["title"]
+    artist_hit = artist_match(g, artist) and not got["artist"]
 
     if title_hit:
         got["title"] = True
