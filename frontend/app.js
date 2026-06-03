@@ -324,6 +324,7 @@ async function startDaily() {
     const d = await fetch(`${API}/daily`).then((r) => r.json());
     if (!d.video_id) throw new Error(d.error || "No daily yet");
     dailyNumber = d.number;   // so Share works even when viewing a saved result
+    currentVideoId = d.video_id;   // so the stats line can load on a saved result
     const saved = localStorage.getItem(dailyKey(d.number));
     if (saved) {
       // Already played today — just show the saved result (no replay)
@@ -383,6 +384,7 @@ function enterDailyResult(obj) {
   dr.classList.remove("hidden");
   document.getElementById("daily-grid").innerHTML =
     `${dailyGrid(obj)}<div class="daily-grid-sub">${obj.solved ? "Solved in " + obj.stems + "/" + obj.total + " stems" : "Not guessed"}</div>`;
+  renderSongStats({ aggregateOnly: true, targetId: "daily-stats" });
   startDailyCountdown();
   showScreen("screen-result");
 }
@@ -897,21 +899,23 @@ function showResult(title, artist) {
 }
 
 // Fetch and show how quickly people solve this song (vs. how the player did).
-async function renderSongStats() {
-  const el = document.getElementById("result-stats");
+async function renderSongStats(opts = {}) {
+  const el = document.getElementById(opts.targetId || "result-stats");
   el.classList.add("hidden");
   el.innerHTML = "";
   if (!currentVideoId) return;
   const parts = [];
-  // Challenge result vs the friend who shared this song
-  if (challengeScore != null && challengeForVid === currentVideoId) {
-    const verdict = score > challengeScore ? "🏆 You win!"
-                  : score === challengeScore ? "🤝 Tie!"
-                  : "😅 They win";
-    parts.push(`🎯 Friend: <strong>${challengeScore}</strong> · You: <strong>${score}</strong> — ${verdict}`);
-  }
-  if (playerSolveStems !== null) {
-    parts.push(`You got it after <strong>${playerSolveStems}</strong> stem${playerSolveStems === 1 ? "" : "s"}.`);
+  if (!opts.aggregateOnly) {
+    // Challenge result vs the friend who shared this song
+    if (challengeScore != null && challengeForVid === currentVideoId) {
+      const verdict = score > challengeScore ? "🏆 You win!"
+                    : score === challengeScore ? "🤝 Tie!"
+                    : "😅 They win";
+      parts.push(`🎯 Friend: <strong>${challengeScore}</strong> · You: <strong>${score}</strong> — ${verdict}`);
+    }
+    if (playerSolveStems !== null) {
+      parts.push(`You got it after <strong>${playerSolveStems}</strong> stem${playerSolveStems === 1 ? "" : "s"}.`);
+    }
   }
   try {
     // small delay so this play/solve is counted before we read the aggregate
