@@ -8,6 +8,7 @@ let activeStemOrder = [];
 
 let sessionId = null;
 let currentVideoId = null;   // video id of the song in play (for sharing)
+let playerSolveStems = null; // stems revealed when the player got the title (or null)
 let stemsRevealed = 0;
 let score = 0;
 let gameOver = false;
@@ -168,6 +169,7 @@ function extractVideoId(url) {
 
 async function startGame(url) {
   currentVideoId = extractVideoId(url);   // remembered for the Share button
+  playerSolveStems = null;
   const errEl = document.getElementById("landing-error");
   errEl.classList.add("hidden");
   document.getElementById("search-results").classList.add("hidden");
@@ -651,6 +653,7 @@ async function submitGuess() {
     if (data.result === "correct") {
       addGuessEntry(data.title, "correct", data.points);
       score += data.points;
+      if (playerSolveStems === null) playerSolveStems = stemsRevealed;
       document.getElementById("score-display").textContent = `Score: ${score}`;
       resultTitle = data.title;
       resultArtist = data.artist;
@@ -718,6 +721,33 @@ function showResult(title, artist) {
   document.getElementById("result-artist").textContent = artist ? `by ${artist}` : "";
   document.getElementById("result-score").textContent = score;
   showScreen("screen-result");
+  renderSongStats();
+}
+
+// Fetch and show how quickly people solve this song (vs. how the player did).
+async function renderSongStats() {
+  const el = document.getElementById("result-stats");
+  el.classList.add("hidden");
+  el.innerHTML = "";
+  if (!currentVideoId) return;
+  const parts = [];
+  if (playerSolveStems !== null) {
+    parts.push(`You got it after <strong>${playerSolveStems}</strong> stem${playerSolveStems === 1 ? "" : "s"}.`);
+  }
+  try {
+    // small delay so this play/solve is counted before we read the aggregate
+    await new Promise((r) => setTimeout(r, 400));
+    const s = await fetch(`${API}/stats/${currentVideoId}`).then((r) => r.json());
+    if (s.avg_stems != null) {
+      let line = `On average players solve it after <strong>${s.avg_stems}</strong> stems`;
+      if (s.solve_rate != null) line += ` · <strong>${Math.round(s.solve_rate * 100)}%</strong> guess it`;
+      parts.push(line + ".");
+    }
+  } catch (_) {}
+  if (parts.length) {
+    el.innerHTML = parts.join("<br>");
+    el.classList.remove("hidden");
+  }
 }
 
 document.getElementById("btn-play-again").addEventListener("click", () => {

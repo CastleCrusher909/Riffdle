@@ -177,6 +177,45 @@ def _seed_by_core_title():
     return _seed_ct_cache
 
 
+# ── Per-song stats ("how quickly people solve each song") ─────────────────────
+# song_stats.json in R2: { video_id: {plays, solves, stem_sum} }
+#   plays    — times the song was served to a player
+#   solves   — times a player guessed the title correctly
+#   stem_sum — sum of stems-revealed at each solve (avg stems = stem_sum / solves)
+STATS_KEY = "song_stats.json"
+_stats_lock = threading.Lock()
+_stats_cache = {"t": 0.0, "data": None}
+STATS_TTL = 30
+
+
+def _get_stats():
+    now = time.time()
+    if _stats_cache["data"] is None or now - _stats_cache["t"] > STATS_TTL:
+        data = r2_get_json(STATS_KEY, {})
+        _stats_cache.update(t=now, data=data if isinstance(data, dict) else {})
+    return _stats_cache["data"]
+
+
+def update_stats(video_id: str, plays: int = 0, solve_stems=None):
+    """Record plays/solves for a song (read-modify-write to R2 on a bg thread)."""
+    if not r2 or not video_id or (plays == 0 and solve_stems is None):
+        return
+    def _w():
+        with _stats_lock:
+            data = r2_get_json(STATS_KEY, {})
+            if not isinstance(data, dict):
+                data = {}
+            s = data.get(video_id) or {"plays": 0, "solves": 0, "stem_sum": 0}
+            s["plays"] = s.get("plays", 0) + plays
+            if solve_stems is not None:
+                s["solves"] = s.get("solves", 0) + 1
+                s["stem_sum"] = s.get("stem_sum", 0) + int(solve_stems)
+            data[video_id] = s
+            r2_put_json(STATS_KEY, data)
+        _stats_cache["data"] = None   # invalidate read cache
+    threading.Thread(target=_w, daemon=True).start()
+
+
 # In-memory game state: { session_id: { ... } }
 games = {}
 
@@ -572,6 +611,7 @@ def process_game(session_id: str, url: str):
         #    so cached songs (and Random) work even if cookies/downloads don't.
         video_id = extract_video_id(url)
         cached = load_cache(video_id) if video_id else None
+        played_vid = video_id if cached else None   # id of the song actually loaded
 
         # 2. Miss → fetch metadata and match the same song from any other upload.
         meta = None
@@ -590,14 +630,17 @@ def process_game(session_id: str, url: str):
                             break
                 if existing_id:
                     cached = load_cache(existing_id)
+                    played_vid = existing_id
 
         if cached:
             games[session_id].update({
                 "title": cached["title"],
                 "artist": cached["artist"],
                 "stem_files": cached["stem_files"],
+                "video_id": played_vid,
                 "status": "ready",
             })
+            update_stats(played_vid, plays=1)
             return
 
         # ── Cache miss ────────────────────────────────────────────
@@ -726,6 +769,9 @@ def submit_guess():
     if matches_title:
         result = "correct"
         points = base_points
+        if not game.get("solve_recorded"):
+            game["solve_recorded"] = True
+            update_stats(game.get("video_id"), solve_stems=stems_revealed)
     elif matches_artist and not game["artist_guessed"]:
         result = "artist"
         points = base_points // 2
@@ -767,6 +813,21 @@ def catalog():
         songs = _seed_pool([], [])   # fallback: songs.json ∩ cache index
     songs = sorted(songs, key=lambda s: s.get("title", "").lower())
     return jsonify({"cache_only": CACHE_ONLY, "songs": songs})
+
+
+@app.route("/api/stats/<video_id>")
+def song_stats(video_id):
+    """How quickly people solve a given song."""
+    s = _get_stats().get(video_id) or {}
+    plays = s.get("plays", 0)
+    solves = s.get("solves", 0)
+    stem_sum = s.get("stem_sum", 0)
+    return jsonify({
+        "plays": plays,
+        "solves": solves,
+        "solve_rate": round(solves / plays, 3) if plays else None,
+        "avg_stems": round(stem_sum / solves, 2) if solves else None,
+    })
 
 
 @app.route("/api/request", methods=["POST"])
@@ -1234,9 +1295,12 @@ def begin_round(code):
         "title": cached["title"],
         "artist": cached["artist"],
         "stem_files": cached["stem_files"],
+        "video_id": song["video_id"],
         "guesses": [],
         "artist_guessed": False,
     }
+    # One "play" per player exposed to this song this round
+    update_stats(song["video_id"], plays=len(room["players"]))
 
     stems = list(cached["stem_files"].keys())
     room["round_token"] = room.get("round_token", 0) + 1
@@ -1429,6 +1493,7 @@ def on_guess(data):
     if is_match(g, title) and not got["title"]:
         got["title"] = True
         result = "correct"
+        update_stats(session.get("video_id"), solve_stems=stems_revealed)
 
         # Order bonus: reward beating others to the title (multiplayer only).
         rank = len(room["title_solvers"])
