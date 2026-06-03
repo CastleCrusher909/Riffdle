@@ -282,9 +282,14 @@ function songShareUrl(videoId, score) {
 async function shareSong(btn) {
   if (!currentVideoId) return;
   const url = songShareUrl(currentVideoId, score);
-  const text = score > 0
+  let text = score > 0
     ? `I scored ${score} on this Riffdle song — can you beat it?`
     : "Can you guess this Riffdle song?";
+  // After finishing, include the Heardle-style grid
+  if (gameOver) {
+    const total = activeStemOrder.length || 4;
+    text += `\n${emojiGrid(playerSolveStems !== null, playerSolveStems, total)}`;
+  }
   const original = btn.textContent;
   const ok = () => { btn.textContent = "✓ Link copied!"; setTimeout(() => (btn.textContent = original), 2000); };
   const message = `${text}\n${url}`;   // so the shared message includes the challenge text
@@ -349,11 +354,14 @@ function finishDaily(title, artist) {
   enterDailyResult(obj);
 }
 
+function emojiGrid(solved, stems, total) {
+  total = total || 4;
+  if (!solved) return "🟥".repeat(total);
+  return "🟪".repeat(Math.max(0, stems - 1)) + "🟩" + "⬛".repeat(Math.max(0, total - stems));
+}
+
 function dailyGrid(obj) {
-  const total = obj.total || 4;
-  if (!obj.solved) return "🟥".repeat(total);
-  const k = obj.stems;
-  return "🟪".repeat(Math.max(0, k - 1)) + "🟩" + "⬛".repeat(Math.max(0, total - k));
+  return emojiGrid(obj.solved, obj.stems, obj.total);
 }
 
 function dailyShareText(obj) {
@@ -370,6 +378,7 @@ function enterDailyResult(obj) {
   document.getElementById("result-score").textContent = obj.score;
   document.getElementById("result-stats").classList.add("hidden");
   document.getElementById("result-actions").classList.add("hidden");
+  document.getElementById("result-grid").classList.add("hidden");
   const dr = document.getElementById("daily-result");
   dr.classList.remove("hidden");
   document.getElementById("daily-grid").innerHTML =
@@ -877,6 +886,12 @@ function showResult(title, artist) {
   document.getElementById("result-title").textContent = title || "—";
   document.getElementById("result-artist").textContent = artist ? `by ${artist}` : "";
   document.getElementById("result-score").textContent = score;
+  // Heardle-style grid of how you did this round
+  const total = activeStemOrder.length || 4;
+  const grid = document.getElementById("result-grid");
+  grid.innerHTML = `${emojiGrid(playerSolveStems !== null, playerSolveStems, total)}` +
+    `<div class="daily-grid-sub">${playerSolveStems !== null ? "Solved in " + playerSolveStems + "/" + total + " stems" : "Not guessed"}</div>`;
+  grid.classList.remove("hidden");
   showScreen("screen-result");
   renderSongStats();
 }
