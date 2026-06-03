@@ -665,6 +665,16 @@ document.getElementById("seek-bar").addEventListener("input", () => {
   document.getElementById("time-current").textContent = fmtTime(target);
 });
 
+// Scroll-wheel over the seek bar scrubs the track
+document.getElementById("seek-bar").addEventListener("wheel", (e) => {
+  const bar = e.currentTarget;
+  if (bar.disabled) return;
+  e.preventDefault();
+  const step = e.deltaY < 0 ? 2 : -2;   // scroll up = forward
+  bar.value = Math.max(0, Math.min(100, parseFloat(bar.value || 0) + step));
+  bar.dispatchEvent(new Event("input"));
+}, { passive: false });
+
 // ── Game init ─────────────────────────────────────────────────
 function initGame(stems) {
   activeStemOrder = stems;

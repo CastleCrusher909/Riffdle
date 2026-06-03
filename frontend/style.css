@@ -407,6 +407,16 @@ body.mp #btn-share { display: none; }
 .game-stats strong { color: var(--accent-lt); font-weight: 600; }
 body.mp #game-stats { display: none; }
 
+.seek-tip {
+  margin: 0.4rem 0 0;
+  font-size: 0.78rem;
+  color: var(--muted);
+  text-align: center;
+  line-height: 1.4;
+}
+/* Multiplayer loops a fixed clip — no scrubbing there */
+body.mp #seek-tip { display: none; }
+
 .challenge-note {
   margin: 0.4rem auto 0;
   max-width: max-content;
@@ -642,7 +652,7 @@ body.mp #challenge-note { display: none; }
   box-shadow: 0 4px 18px rgba(124, 58, 237, 0.35);
 }
 .btn-daily:hover { background: linear-gradient(135deg, #c084fc, var(--accent-lt)); }
-.divider-top { margin-top: 1.25rem; }
+.divider-top { margin-top: 1.5rem; margin-bottom: 0.9rem; }
 
 .daily-result {
   display: flex;
