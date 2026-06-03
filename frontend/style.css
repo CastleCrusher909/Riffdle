@@ -379,6 +379,7 @@ button:active { transform: scale(0.97); }
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+  cursor: pointer;
 }
 #score-display {
   font-size: 1rem;
@@ -414,8 +415,6 @@ body.mp #game-stats { display: none; }
   text-align: center;
   line-height: 1.4;
 }
-/* Multiplayer loops a fixed clip — no scrubbing there */
-body.mp #seek-tip { display: none; }
 
 .challenge-note {
   margin: 0.4rem auto 0;

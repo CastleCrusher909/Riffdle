@@ -312,6 +312,12 @@ async function shareSong(btn) {
 document.getElementById("btn-share").addEventListener("click", (e) => shareSong(e.currentTarget));
 document.getElementById("btn-share-result").addEventListener("click", (e) => shareSong(e.currentTarget));
 
+// Clicking the in-game Riffdle logo returns to the main menu
+document.getElementById("logo-home").addEventListener("click", () => {
+  if (window.mpActive && !confirm("Leave the game and go back to the menu?")) return;
+  window.location.href = location.origin + location.pathname;   // home, dropping any ?song/?daily
+});
+
 // ── Daily Challenge ───────────────────────────────────────────
 const dailyKey = (n) => `riffdle-daily-${n}`;
 
