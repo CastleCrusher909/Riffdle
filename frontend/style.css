@@ -398,6 +398,15 @@ button:active { transform: scale(0.97); }
 /* Sharing is a single-player action; multiplayer rounds are host-driven */
 body.mp #btn-share { display: none; }
 
+.game-stats {
+  margin: 0.25rem 0 0;
+  font-size: 0.82rem;
+  color: var(--muted);
+  text-align: center;
+}
+.game-stats strong { color: var(--accent-lt); font-weight: 600; }
+body.mp #game-stats { display: none; }
+
 .result-actions {
   display: flex;
   flex-direction: column;

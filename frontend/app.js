@@ -574,7 +574,25 @@ function initGame(stems) {
 
   document.getElementById("btn-next-stem").onclick = revealNextStem;
   showScreen("screen-game");
+  renderGameStats();
   revealNextStem();
+}
+
+// Show the song's difficulty live while playing (aggregate only — no answer).
+async function renderGameStats() {
+  const el = document.getElementById("game-stats");
+  el.classList.add("hidden");
+  el.innerHTML = "";
+  if (!currentVideoId || window.mpActive) return;
+  try {
+    const s = await fetch(`${API}/stats/${currentVideoId}`).then((r) => r.json());
+    if (s.avg_stems != null) {
+      let line = `📊 Players usually get this by stem <strong>${s.avg_stems}</strong>`;
+      if (s.solve_rate != null) line += ` · <strong>${Math.round(s.solve_rate * 100)}%</strong> guess it`;
+      el.innerHTML = line;
+      el.classList.remove("hidden");
+    }
+  } catch (_) {}
 }
 
 // ── Stem reveal ───────────────────────────────────────────────
