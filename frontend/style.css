@@ -104,6 +104,34 @@ button:active { transform: scale(0.97); }
 .error-msg { color: var(--red); margin-top: 0.75rem; font-size: 0.9rem; }
 .hidden    { display: none !important; }
 
+/* ── About / SEO footer (quiet, below the fold) ──────────────── */
+.site-about {
+  margin-top: 3.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+  max-width: 540px;
+  text-align: left;
+  color: var(--muted);
+}
+.site-about h2 {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--muted);
+  margin: 0 0 0.5rem;
+}
+.site-about h3 {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--muted);
+  margin: 1rem 0 0.25rem;
+}
+.site-about p {
+  font-size: 0.8rem;
+  line-height: 1.5;
+  margin: 0;
+  color: #56566a;
+}
+
 /* ── Request a song ──────────────────────────────────────────── */
 .request-section {
   margin-top: 1rem;
