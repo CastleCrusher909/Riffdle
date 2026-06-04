@@ -17,12 +17,18 @@
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  background: var(--bg);
   color: var(--text);
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
+  /* Layered glow over near-black — gives depth instead of flat black */
+  background:
+    radial-gradient(1100px 620px at 50% -8%, rgba(124, 58, 237, 0.22), transparent 60%),
+    radial-gradient(760px 520px at 92% 108%, rgba(192, 132, 252, 0.12), transparent 55%),
+    radial-gradient(680px 480px at 6% 96%, rgba(34, 197, 94, 0.05), transparent 55%),
+    var(--bg);
+  background-attachment: fixed;
 }
 
 /* ── Screens ─────────────────────────────────────────────────── */
@@ -32,16 +38,36 @@ body {
 /* ── Landing ─────────────────────────────────────────────────── */
 .hero {
   text-align: center;
-  padding: 2rem;
-  max-width: 520px;
+  padding: 2.5rem 1.5rem;
+  max-width: 600px;
   width: 100%;
 }
 
+.brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 1.75rem;
+}
+.brand-mark {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 20px;
+  margin-bottom: 0.85rem;
+  color: #fff;
+  background: linear-gradient(140deg, var(--accent-lt), #c084fc);
+  box-shadow: 0 10px 30px rgba(124, 58, 237, 0.45), inset 0 1px 0 rgba(255,255,255,0.25);
+}
+.brand-mark svg { width: 34px; height: 34px; }
+
 .logo {
-  font-size: 3rem;
+  font-size: 3.4rem;
   font-weight: 800;
-  letter-spacing: -1px;
-  background: linear-gradient(135deg, var(--accent-lt), #c084fc);
+  letter-spacing: -1.5px;
+  line-height: 1;
+  background: linear-gradient(135deg, #ffffff 10%, var(--accent-lt) 60%, #c084fc);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -49,28 +75,60 @@ body {
 
 .tagline {
   color: var(--muted);
-  margin: 0.5rem 0 2rem;
-  font-size: 1.1rem;
+  margin: 0.6rem 0 0;
+  font-size: 1.05rem;
+}
+
+/* The frosted surface holding all the play options */
+.play-card {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: 100%;
+  padding: 1.5rem;
+  border-radius: 22px;
+  border: 1px solid rgba(124, 58, 237, 0.18);
+  background: linear-gradient(180deg, rgba(34, 34, 44, 0.55), rgba(20, 20, 27, 0.55));
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.5);
 }
 
 .url-form {
   display: flex;
   gap: 0.5rem;
 }
+.search-field {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+.search-field .field-ico {
+  position: absolute;
+  left: 0.85rem;
+  width: 18px;
+  height: 18px;
+  color: var(--muted);
+  pointer-events: none;
+}
 
 .url-form input, #guess-input {
   flex: 1;
+  width: 100%;
   background: var(--surface2);
   border: 1px solid var(--border);
   color: var(--text);
   border-radius: var(--radius);
-  padding: 0.75rem 1rem;
+  padding: 0.8rem 1rem;
   font-size: 1rem;
   outline: none;
-  transition: border-color 0.2s;
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
+.search-field input { padding-left: 2.7rem; }
 .url-form input:focus, #guess-input:focus {
   border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.25);
 }
 
 button {
@@ -82,10 +140,19 @@ button {
   font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
-  transition: background 0.2s, transform 0.1s;
+  transition: background 0.2s, transform 0.12s ease, box-shadow 0.2s, filter 0.2s;
 }
-button:hover  { background: var(--accent-lt); }
-button:active { transform: scale(0.97); }
+button:hover  { background: var(--accent-lt); transform: translateY(-1px); }
+button:active { transform: translateY(0) scale(0.98); }
+
+/* Buttons with a leading icon */
+.btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+.btn-ico { width: 20px; height: 20px; flex-shrink: 0; }
 
 .btn-secondary {
   background: var(--surface2);
@@ -197,7 +264,7 @@ button:active { transform: scale(0.97); }
 
 /* ── Random section ──────────────────────────────────────────── */
 .random-section {
-  margin-top: 1.5rem;
+  margin-top: 0;
   display: flex;
   flex-direction: column;
   gap: 0.9rem;
@@ -239,21 +306,28 @@ button:active { transform: scale(0.97); }
 }
 
 .chip {
-  background: var(--surface2);
+  background: rgba(255, 255, 255, 0.04);
   border: 1px solid var(--border);
   color: var(--muted);
   border-radius: 99px;
-  padding: 0.3rem 0.8rem;
+  padding: 0.38rem 0.95rem;
   font-size: 0.82rem;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
-  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  transition: background 0.18s, border-color 0.18s, color 0.18s, box-shadow 0.18s, transform 0.1s;
 }
-.chip:hover { border-color: var(--accent); color: var(--text); transform: none; }
+.chip:hover {
+  border-color: var(--accent-lt);
+  color: var(--text);
+  background: rgba(124, 58, 237, 0.12);
+  transform: translateY(-1px);
+}
+.chip:active { transform: translateY(0) scale(0.96); }
 .chip.active {
-  background: var(--accent);
-  border-color: var(--accent);
+  background: linear-gradient(135deg, var(--accent), var(--accent-lt));
+  border-color: transparent;
   color: #fff;
+  box-shadow: 0 0 0 1px rgba(157, 92, 255, 0.5), 0 4px 16px rgba(124, 58, 237, 0.5);
 }
 
 .filter-hint {
@@ -263,7 +337,7 @@ button:active { transform: scale(0.97); }
 }
 
 #btn-random {
-  align-self: center;
+  width: 100%;
   margin-top: 0.2rem;
 }
 
@@ -652,17 +726,39 @@ body.mp #challenge-note { display: none; }
 .btn-mp { background: var(--surface2); border: 1px solid var(--accent); color: var(--accent-lt); width: 100%; }
 .btn-mp:hover { background: var(--accent); color: #fff; }
 
-/* ── Daily Challenge ─────────────────────────────────────────── */
+/* ── Daily Challenge (hero CTA) ──────────────────────────────── */
 .btn-daily {
+  position: relative;
+  overflow: hidden;
   width: 100%;
-  font-size: 1.1rem;
-  padding: 0.9rem 1.4rem;
-  background: linear-gradient(135deg, var(--accent-lt), #c084fc);
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  text-align: left;
+  padding: 1rem 1.2rem;
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-lt) 55%, #c084fc 100%);
   color: #fff;
-  box-shadow: 0 4px 18px rgba(124, 58, 237, 0.35);
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(124, 58, 237, 0.45), inset 0 1px 0 rgba(255,255,255,0.22);
 }
-.btn-daily:hover { background: linear-gradient(135deg, #c084fc, var(--accent-lt)); }
-.divider-top { margin-top: 1.5rem; margin-bottom: 0.9rem; }
+.btn-daily:hover { transform: translateY(-2px); box-shadow: 0 16px 40px rgba(124, 58, 237, 0.6), inset 0 1px 0 rgba(255,255,255,0.25); }
+/* Sheen sweep on hover */
+.btn-daily::after {
+  content: "";
+  position: absolute;
+  top: 0; left: -60%;
+  width: 50%; height: 100%;
+  background: linear-gradient(100deg, transparent, rgba(255,255,255,0.35), transparent);
+  transform: skewX(-18deg);
+  transition: left 0.6s ease;
+}
+.btn-daily:hover::after { left: 130%; }
+.btn-daily .btn-ico { width: 26px; height: 26px; }
+.btn-daily-text { display: flex; flex-direction: column; line-height: 1.2; flex: 1; }
+.btn-daily-title { font-size: 1.15rem; font-weight: 700; }
+.btn-daily-sub { font-size: 0.78rem; font-weight: 500; opacity: 0.85; }
+.btn-daily .btn-chevron { width: 20px; height: 20px; opacity: 0.9; transition: transform 0.2s; }
+.btn-daily:hover .btn-chevron { transform: translateX(3px); }
 
 .daily-result {
   display: flex;

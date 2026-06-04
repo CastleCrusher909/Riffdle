@@ -48,71 +48,96 @@
   <!-- ── Landing ───────────────────────────────────────────────── -->
   <div id="screen-landing" class="screen active">
     <div class="hero">
-      <h1 class="logo">🎸 Riffdle</h1>
-      <p class="tagline">Guess the song — one stem at a time.</p>
+      <header class="brand">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
+          </svg>
+        </span>
+        <h1 class="logo">Riffdle</h1>
+        <p class="tagline">Guess the song — one stem at a time.</p>
+      </header>
 
-      <button id="btn-daily" class="btn-daily">🗓️ Daily Challenge</button>
+      <div class="play-card">
+        <button id="btn-daily" class="btn-daily">
+          <svg class="btn-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="16" rx="2.5"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4"/></svg>
+          <span class="btn-daily-text">
+            <span class="btn-daily-title">Daily Challenge</span>
+            <span class="btn-daily-sub">One song · everyone · today</span>
+          </span>
+          <svg class="btn-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+        </button>
 
-      <div class="divider divider-top"><span>or play any song</span></div>
+        <div class="divider"><span>or play any song</span></div>
 
-      <div class="url-form">
-        <input
-          id="yt-url"
-          type="text"
-          placeholder="Song name or YouTube URL…"
-          autocomplete="off"
-        />
-        <button id="btn-start">Search</button>
-      </div>
-      <p id="landing-error" class="error-msg hidden"></p>
-      <div id="search-results" class="search-results hidden"></div>
-
-      <div class="request-section">
-        <button id="btn-request-toggle" class="request-toggle">Don't see your song?</button>
-        <p class="request-hint">Request a song and we'll try to add it to Riffdle.</p>
-        <div id="request-form" class="request-form hidden">
-          <input
-            id="request-input"
-            type="text"
-            placeholder="Song name &amp; artist…"
-            autocomplete="off"
-            maxlength="120"
-          />
-          <button id="btn-request-submit">Request</button>
-        </div>
-        <p id="request-msg" class="request-msg hidden"></p>
-      </div>
-
-      <div class="random-section">
-        <div class="divider"><span>or</span></div>
-        <div class="filter-group">
-          <span class="filter-label">Decade</span>
-          <div class="chips" id="chips-decade">
-            <button class="chip" data-value="70s">70s</button>
-            <button class="chip" data-value="80s">80s</button>
-            <button class="chip" data-value="90s">90s</button>
-            <button class="chip" data-value="00s">00s</button>
-            <button class="chip" data-value="10s">10s</button>
-            <button class="chip" data-value="20s">20s</button>
+        <div class="url-form">
+          <div class="search-field">
+            <svg class="field-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+            <input
+              id="yt-url"
+              type="text"
+              placeholder="Song name or YouTube URL…"
+              autocomplete="off"
+            />
           </div>
+          <button id="btn-start">Search</button>
         </div>
-        <div class="filter-group">
-          <span class="filter-label">Genre</span>
-          <div class="chips" id="chips-genre">
-            <button class="chip" data-value="pop">Pop</button>
-            <button class="chip" data-value="rock">Rock</button>
-            <button class="chip" data-value="hiphop">Hip-Hop</button>
-            <button class="chip" data-value="randb">R&amp;B</button>
-            <button class="chip" data-value="electronic">Electronic</button>
-          </div>
-        </div>
-        <p class="filter-hint">Pick filters to narrow it down, or leave blank for any song.</p>
-        <button id="btn-random">🎲 Random</button>
-      </div>
+        <p id="landing-error" class="error-msg hidden"></p>
+        <div id="search-results" class="search-results hidden"></div>
 
-      <div class="mp-entry">
-        <div class="divider"><span>or</span></div>
-        <button id="btn-mp" class="btn-mp">🎮 Play with friends</button>
+        <div class="request-section">
+          <button id="btn-request-toggle" class="request-toggle">Don't see your song?</button>
+          <p class="request-hint">Request a song and we'll try to add it to Riffdle.</p>
+          <div id="request-form" class="request-form hidden">
+            <input
+              id="request-input"
+              type="text"
+              placeholder="Song name &amp; artist…"
+              autocomplete="off"
+              maxlength="120"
+            />
+            <button id="btn-request-submit">Request</button>
+          </div>
+          <p id="request-msg" class="request-msg hidden"></p>
+        </div>
+
+        <div class="random-section">
+          <div class="divider"><span>or</span></div>
+          <div class="filter-group">
+            <span class="filter-label">Decade</span>
+            <div class="chips" id="chips-decade">
+              <button class="chip" data-value="70s">70s</button>
+              <button class="chip" data-value="80s">80s</button>
+              <button class="chip" data-value="90s">90s</button>
+              <button class="chip" data-value="00s">00s</button>
+              <button class="chip" data-value="10s">10s</button>
+              <button class="chip" data-value="20s">20s</button>
+            </div>
+          </div>
+          <div class="filter-group">
+            <span class="filter-label">Genre</span>
+            <div class="chips" id="chips-genre">
+              <button class="chip" data-value="pop">Pop</button>
+              <button class="chip" data-value="rock">Rock</button>
+              <button class="chip" data-value="hiphop">Hip-Hop</button>
+              <button class="chip" data-value="randb">R&amp;B</button>
+              <button class="chip" data-value="electronic">Electronic</button>
+            </div>
+          </div>
+          <p class="filter-hint">Pick filters to narrow it down, or leave blank for any song.</p>
+          <button id="btn-random" class="btn-icon">
+            <svg class="btn-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h3l11 12h3M4 18h3l3-3M21 6l-2-2m2 2-2 2M21 18l-2-2m2 2-2 2M14 8l1-2"/></svg>
+            Random
+          </button>
+        </div>
+
+        <div class="mp-entry">
+          <div class="divider"><span>or</span></div>
+          <button id="btn-mp" class="btn-mp btn-icon">
+            <svg class="btn-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M16 19v-1a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v1"/><circle cx="9" cy="7" r="3.2"/><path d="M22 19v-1a4 4 0 0 0-3-3.87M16 3.5a4 4 0 0 1 0 7"/></svg>
+            Play with friends
+          </button>
+        </div>
       </div>
 
       <details class="site-about">
