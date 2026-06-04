@@ -533,6 +533,12 @@ let loopRegion = null;
 function ensureCtx() {
   if (!audioCtx) {
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    // iOS mutes Web Audio when the ringer/silent switch is off. Marking the
+    // session as "playback" makes it play through the switch like a music app
+    // (Safari 16.4+; harmless / ignored elsewhere).
+    try {
+      if (navigator.audioSession) navigator.audioSession.type = "playback";
+    } catch (_) {}
   }
   return audioCtx;
 }
