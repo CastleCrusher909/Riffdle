@@ -350,10 +350,11 @@ async function mpStartGame(d) {
   $("mp-feed").innerHTML = "";
   $("guess-input").value = "";
   $("score-display").textContent = "Score: 0";
-  $("btn-play-all").textContent = "▶";
+  $("btn-play-all").classList.remove("playing");
   $("btn-play-all").disabled = false;
   $("seek-bar").disabled = true;   // loop mode: no scrubbing, bar shows clip progress
   $("seek-bar").value = 0;
+  $("seek-bar").style.setProperty("--seek", "0%");
   $("time-current").textContent = "0:00";
   $("time-total").textContent = "0:00";
   $("artist-bonus").classList.add("hidden");

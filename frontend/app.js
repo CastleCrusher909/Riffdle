@@ -282,11 +282,11 @@ function songShareUrl(videoId, score) {
 // Copy and Share are distinct: Copy always writes to the clipboard (with
 // confirmation); Share opens the native sheet and does nothing if dismissed.
 async function copyToClipboard(text, btn) {
-  const original = btn.textContent;
+  const original = btn.innerHTML;   // innerHTML so any SVG icon is restored
   try {
     await navigator.clipboard.writeText(text);
     btn.textContent = "✓ Copied!";
-    setTimeout(() => (btn.textContent = original), 2000);
+    setTimeout(() => (btn.innerHTML = original), 2000);
   } catch (_) {
     window.prompt("Copy this:", text);
   }
@@ -632,7 +632,7 @@ function masterPlay() {
   if (!activeStemOrder.slice(0, stemsRevealed).some((s) => buffers[s])) return;
   isPlaying = true;
   restartSources();
-  document.getElementById("btn-play-all").textContent = "⏸";
+  document.getElementById("btn-play-all").classList.add("playing");
   cancelAnimationFrame(rafId);
   rafId = requestAnimationFrame(tickSeekBar);
 }
@@ -642,7 +642,7 @@ function masterPause() {
   startOffset = currentPosition();
   isPlaying = false;
   stopAllSources();
-  document.getElementById("btn-play-all").textContent = "▶";
+  document.getElementById("btn-play-all").classList.remove("playing");
   cancelAnimationFrame(rafId);
 }
 
@@ -650,10 +650,17 @@ function masterStop() {
   isPlaying = false;
   stopAllSources();
   startOffset = 0;
-  document.getElementById("btn-play-all").textContent = "▶";
+  document.getElementById("btn-play-all").classList.remove("playing");
   cancelAnimationFrame(rafId);
   document.getElementById("seek-bar").value = 0;
+  document.getElementById("seek-bar").style.setProperty("--seek", "0%");
   document.getElementById("time-current").textContent = "0:00";
+}
+
+// Keep the custom slider's filled portion in sync with its value
+function syncSeekFill() {
+  const b = document.getElementById("seek-bar");
+  b.style.setProperty("--seek", (parseFloat(b.value) || 0) + "%");
 }
 
 function tickSeekBar() {
@@ -661,6 +668,7 @@ function tickSeekBar() {
   if (dur) {
     const pos = currentPosition();
     document.getElementById("seek-bar").value = (pos / dur) * 100;
+    syncSeekFill();
     document.getElementById("time-current").textContent = fmtTime(pos);
     document.getElementById("time-total").textContent = fmtTime(dur);
     // Linear mode stops at the end; loop mode just keeps cycling.
@@ -684,6 +692,7 @@ document.getElementById("seek-bar").addEventListener("input", () => {
   const target = (document.getElementById("seek-bar").value / 100) * dur;
   startOffset = target;
   if (isPlaying) restartSources();
+  syncSeekFill();
   document.getElementById("time-current").textContent = fmtTime(target);
 });
 
@@ -723,9 +732,10 @@ function initGame(stems) {
   document.getElementById("guess-log").innerHTML = "";
   document.getElementById("score-display").textContent = "Score: 0";
   document.getElementById("guess-input").value = "";
-  document.getElementById("btn-play-all").textContent = "▶";
+  document.getElementById("btn-play-all").classList.remove("playing");
   document.getElementById("btn-play-all").disabled = true;
   document.getElementById("seek-bar").value = 0;
+  document.getElementById("seek-bar").style.setProperty("--seek", "0%");
   document.getElementById("seek-bar").disabled = true;
   document.getElementById("time-current").textContent = "0:00";
   document.getElementById("time-total").textContent = "0:00";
@@ -750,7 +760,7 @@ function renderChallengeNote() {
   el.classList.add("hidden");
   el.innerHTML = "";
   if (challengeScore != null && challengeForVid === currentVideoId && !window.mpActive) {
-    el.innerHTML = `🎯 A friend scored <strong>${challengeScore}</strong> — beat it!`;
+    el.innerHTML = `A friend scored <strong>${challengeScore}</strong> — beat it!`;
     el.classList.remove("hidden");
   }
 }
@@ -764,7 +774,7 @@ async function renderGameStats() {
   try {
     const s = await fetch(`${API}/stats/${currentVideoId}`).then((r) => r.json());
     if (s.avg_stems != null) {
-      let line = `📊 Players usually get this by stem <strong>${s.avg_stems}</strong>`;
+      let line = `Players usually get this by stem <strong>${s.avg_stems}</strong>`;
       if (s.solve_rate != null) line += ` · <strong>${Math.round(s.solve_rate * 100)}%</strong> guess it`;
       el.innerHTML = line;
       el.classList.remove("hidden");

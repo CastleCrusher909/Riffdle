@@ -333,8 +333,14 @@
   <!-- ── Game ─────────────────────────────────────────────────── -->
   <div id="screen-game" class="screen">
     <header class="game-header">
-      <span class="logo-sm" id="logo-home" title="Back to menu">🎸 Riffdle</span>
-      <button id="btn-share" class="btn-share" title="Copy a link to challenge a friend with this song">🔗 Share</button>
+      <span class="logo-sm" id="logo-home" title="Back to menu">
+        <svg class="logo-sm-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+        <span class="logo-text">Riffdle</span>
+      </span>
+      <button id="btn-share" class="btn-share btn-icon" title="Copy a link to challenge a friend with this song">
+        <svg class="btn-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><path d="M16 6l-4-4-4 4M12 2v13"/></svg>
+        Share
+      </button>
       <span id="score-display">Score: 0</span>
     </header>
     <p id="game-stats" class="game-stats hidden"></p>
@@ -361,30 +367,41 @@
     <!-- Stems panel -->
     <div class="stems-panel">
       <div class="stem-card" id="stem-drums">
-        <div class="stem-icon">🥁</div>
+        <div class="stem-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="9" rx="9" ry="3.2"/><path d="M3 9v5c0 1.8 4 3.2 9 3.2s9-1.4 9-3.2V9"/><path d="M6 16l-2 5M18 16l2 5"/></svg>
+        </div>
         <div class="stem-label">Drums</div>
-        <div class="stem-lock locked">🔒</div>
+        <div class="stem-lock"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></div>
       </div>
       <div class="stem-card" id="stem-bass">
-        <div class="stem-icon">🎸</div>
+        <div class="stem-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="16" r="4.2"/><path d="M11 13 18.5 5.5"/><path d="M16.5 3.5l4 4-2.2 2.2-4-4z"/><path d="M8 16l2-2"/></svg>
+        </div>
         <div class="stem-label">Bass</div>
-        <div class="stem-lock locked">🔒</div>
+        <div class="stem-lock"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></div>
       </div>
       <div class="stem-card" id="stem-melody">
-        <div class="stem-icon">🎹</div>
+        <div class="stem-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 14h18M7.5 5v9M12 5v9M16.5 5v9"/></svg>
+        </div>
         <div class="stem-label">Melody</div>
-        <div class="stem-lock locked">🔒</div>
+        <div class="stem-lock"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></div>
       </div>
       <div class="stem-card" id="stem-vocals">
-        <div class="stem-icon">🎤</div>
+        <div class="stem-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3M8.5 21h7"/></svg>
+        </div>
         <div class="stem-label">Vocals</div>
-        <div class="stem-lock locked">🔒</div>
+        <div class="stem-lock"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></div>
       </div>
     </div>
 
     <!-- Master player -->
     <div class="master-player">
-      <button id="btn-play-all" class="btn-play-all" disabled>▶</button>
+      <button id="btn-play-all" class="btn-play-all" disabled aria-label="Play / pause">
+        <svg class="ico-play" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.14v13.72L19 12z"/></svg>
+        <svg class="ico-pause" viewBox="0 0 24 24" fill="currentColor"><path d="M7 5h3.2v14H7zM13.8 5H17v14h-3.2z"/></svg>
+      </button>
       <div class="master-seek-wrap">
         <input id="seek-bar" type="range" min="0" max="100" value="0" step="0.1" />
         <div class="time-row">
@@ -394,8 +411,8 @@
       </div>
     </div>
     <p id="seek-tip" class="seek-tip">
-      <span class="tip-scrub">💡 Slide the bar to move through the song — a stem might be silent here but come in elsewhere.</span>
-      <span class="tip-warn">💡 Heads up: a stem might be silent in this clip but come in elsewhere.</span>
+      <span class="tip-scrub">Slide the bar to move through the song — a stem might be silent here but come in elsewhere.</span>
+      <span class="tip-warn">Heads up: a stem might be silent in this clip but come in elsewhere.</span>
     </p>
 
     <!-- Reveal row -->
@@ -415,7 +432,10 @@
         <button id="btn-guess">Guess</button>
         <button id="btn-skip" class="btn-skip">Skip</button>
       </div>
-      <p id="artist-bonus" class="artist-bonus hidden">🎤 Got it! Now name the artist for a bonus.</p>
+      <p id="artist-bonus" class="artist-bonus hidden">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+        Got it! Now name the artist for a bonus.
+      </p>
       <div id="guess-log"></div>
     </div>
   </div>
