@@ -420,12 +420,14 @@ button:active { transform: translateY(0) scale(0.98); }
 }
 
 .spinner {
-  width: 52px; height: 52px;
-  border: 4px solid var(--border);
-  border-top-color: var(--accent);
+  width: 56px; height: 56px;
+  border: 4px solid rgba(124, 58, 237, 0.2);
+  border-top-color: var(--accent-lt);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
+  box-shadow: 0 0 24px rgba(124, 58, 237, 0.4);
 }
+#loading-label { color: var(--muted); font-size: 0.95rem; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 #loading-label { color: var(--muted); font-size: 1rem; }
@@ -813,20 +815,31 @@ body.mp #challenge-note { display: none; }
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 1.5rem;
-  padding: 2rem;
-  max-width: 440px;
+  gap: 1.4rem;
+  padding: 2rem 1.75rem;
+  max-width: 460px;
+  width: 100%;
+  border-radius: 22px;
+  border: 1px solid rgba(124, 58, 237, 0.18);
+  background: linear-gradient(180deg, rgba(34, 34, 44, 0.6), rgba(20, 20, 27, 0.6));
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.5);
+  animation: cardRise 0.4s cubic-bezier(0.22, 1, 0.36, 1);
 }
-.result-box h2 { font-size: 2rem; }
+@keyframes cardRise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+.result-box h2 { font-size: 1.9rem; letter-spacing: -0.5px; }
 
 .answer-card {
-  background: var(--surface);
-  border: 1px solid var(--accent);
-  border-radius: var(--radius);
+  position: relative;
+  background: linear-gradient(160deg, color-mix(in srgb, var(--accent) 16%, var(--surface)), var(--surface) 80%);
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  border-radius: 16px;
   padding: 1.5rem 2rem;
   width: 100%;
+  box-shadow: 0 0 0 1px rgba(124, 58, 237, 0.15), 0 10px 30px rgba(124, 58, 237, 0.18);
 }
-.answer-title  { font-size: 1.5rem; font-weight: 800; }
+.answer-title  { font-size: 1.55rem; font-weight: 800; letter-spacing: -0.5px; }
 .answer-artist { color: var(--muted); margin-top: 0.3rem; font-size: 1rem; }
 
 .final-score { color: var(--text); font-size: 1.1rem; }
@@ -931,10 +944,15 @@ body.mp #challenge-note { display: none; }
 .mp-setup-cols { display: flex; gap: 1rem; flex-wrap: wrap; align-items: stretch; }
 .mp-setup-card {
   flex: 1 1 240px; min-width: 240px;
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--radius); padding: 1.2rem; text-align: left;
+  background: linear-gradient(180deg, rgba(34, 34, 44, 0.55), rgba(20, 20, 27, 0.55));
+  border: 1px solid var(--border);
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  border-radius: 18px; padding: 1.3rem; text-align: left;
+  box-shadow: 0 16px 44px rgba(0, 0, 0, 0.35);
+  transition: border-color 0.2s, transform 0.2s;
 }
-.mp-setup-card h3 { font-size: 1rem; margin-bottom: 0.9rem; }
+.mp-setup-card:hover { border-color: rgba(124, 58, 237, 0.4); }
+.mp-setup-card h3 { font-size: 1.05rem; margin-bottom: 0.9rem; }
 /* Only the action button stretches — not the .chip buttons nested in .mp-field */
 .mp-setup-card > button { width: 100%; margin-top: 0.6rem; }
 
@@ -981,11 +999,16 @@ body.mp #challenge-note { display: none; }
 
 /* ── Lobby ──────────────────────────────────────────────────── */
 .lobby-box {
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--radius); padding: 1.8rem; max-width: 520px;
+  border: 1px solid rgba(124, 58, 237, 0.18);
+  background: linear-gradient(180deg, rgba(34, 34, 44, 0.6), rgba(20, 20, 27, 0.6));
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.5);
+  border-radius: 22px; padding: 1.9rem; max-width: 520px;
   width: 100%; margin: 2rem auto; text-align: left;
+  animation: cardRise 0.4s cubic-bezier(0.22, 1, 0.36, 1);
 }
-.lobby-box h2 { margin-bottom: 1.2rem; }
+.lobby-box h2 { margin-bottom: 1.2rem; font-size: 1.6rem; letter-spacing: -0.5px; }
 
 .lobby-code-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1.4rem; flex-wrap: wrap; }
 .lobby-code { display: flex; flex-direction: column; }
@@ -1068,8 +1091,33 @@ body.mp #btn-mp-skip { display: inline-block; }
 .streak-badge { color: #ff7a18; font-weight: 700; font-size: 0.85em; }
 
 /* ── Result leaderboard ─────────────────────────────────────── */
-.leaderboard { margin: 1.4rem 0; text-align: left; }
-#mp-leaderboard li { display: flex; align-items: center; gap: 0.7rem; padding: 0.5rem 0.7rem; background: var(--surface2); border-radius: 8px; margin-top: 0.4rem; }
-.lb-rank { font-size: 1.1rem; width: 1.8rem; }
+.leaderboard { margin: 0.6rem 0; text-align: left; width: 100%; }
+#mp-leaderboard li {
+  display: flex; align-items: center; gap: 0.7rem;
+  padding: 0.6rem 0.8rem; background: var(--surface2);
+  border: 1px solid var(--border); border-radius: 10px; margin-top: 0.45rem;
+  animation: guessIn 0.3s ease;
+}
+#mp-leaderboard li:nth-child(1) { border-color: rgba(234, 179, 8, 0.55); background: linear-gradient(90deg, rgba(234,179,8,0.12), var(--surface2)); }
+#mp-leaderboard li:nth-child(2) { border-color: rgba(203, 213, 225, 0.45); }
+#mp-leaderboard li:nth-child(3) { border-color: rgba(180, 120, 60, 0.45); }
+.lb-rank {
+  display: grid; place-items: center;
+  width: 1.7rem; height: 1.7rem; flex-shrink: 0;
+  font-size: 0.85rem; font-weight: 800;
+  border-radius: 50%; background: rgba(255,255,255,0.08); color: var(--muted);
+}
+#mp-leaderboard li:nth-child(1) .lb-rank { background: #eab308; color: #1a1500; }
+#mp-leaderboard li:nth-child(2) .lb-rank { background: #cbd5e1; color: #14181f; }
+#mp-leaderboard li:nth-child(3) .lb-rank { background: #b4783c; color: #1a0f00; }
 .lb-name { flex: 1; font-weight: 600; }
 .lb-score { color: var(--accent-lt); font-weight: 700; }
+
+/* Host crown marker (replaces the 👑 emoji) */
+.crown-ico { width: 14px; height: 14px; color: #eab308; vertical-align: -2px; margin-right: 4px; }
+
+/* HUD panels — match the frosted surfaces elsewhere */
+.mp-timer, .mp-scoreboard, .mp-feed-wrap {
+  background: linear-gradient(180deg, rgba(34, 34, 44, 0.6), rgba(24, 24, 31, 0.6));
+}
+.mp-result-round { text-transform: uppercase; letter-spacing: 0.05em; }

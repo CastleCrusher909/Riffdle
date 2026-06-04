@@ -42,6 +42,9 @@ let mpLastGuess = "";
 // ── Small helpers ─────────────────────────────────────────────────────────────
 function $(id) { return document.getElementById(id); }
 
+// Crown marker for the host (emoji-free)
+const CROWN = '<svg class="crown-ico" viewBox="0 0 24 24" fill="currentColor" aria-label="host"><path d="M3 8l4.5 3.2L12 5l4.5 6.2L21 8l-1.7 10.5H4.7z"/></svg>';
+
 function chipValues(containerId) {
   return [...document.querySelectorAll(`#${containerId} .chip.active`)].map((c) => c.dataset.value);
 }
@@ -202,7 +205,7 @@ function renderLobby() {
   list.innerHTML = "";
   mpRoom.players.forEach((p) => {
     const li = document.createElement("li");
-    li.innerHTML = `${p.is_host ? "👑 " : ""}${escapeHtml(p.name)}`;
+    li.innerHTML = `${p.is_host ? CROWN : ""}${escapeHtml(p.name)}`;
     list.appendChild(li);
   });
 
@@ -514,20 +517,20 @@ function mpResetSkip() {
   const btn = $("btn-mp-skip");
   btn.classList.remove("voted");
   btn.disabled = false;
-  btn.textContent = "⏭ Skip stem";
+  btn.textContent = "Skip stem";
   $("mp-skip-status").classList.add("hidden");
 }
 
 function onSkipUpdate(d) {
   // d = { requested, needed }. Show the running tally to everyone.
   const onLast = stemsRevealed >= mpTotalStems;
-  const label = onLast ? "⏭ Skip ahead" : "⏭ Skip stem";
+  const label = onLast ? "Skip ahead" : "Skip stem";
   $("btn-mp-skip").textContent = d.needed > 1 ? `${label} (${d.requested}/${d.needed})` : label;
 
   const status = $("mp-skip-status");
   if (d.requested > 0 && d.needed > 0) {
     const verb = onLast ? "skip ahead" : "skip this stem";
-    status.textContent = `🙋 ${d.requested} of ${d.needed} want to ${verb}`;
+    status.textContent = `${d.requested} of ${d.needed} want to ${verb}`;
     status.classList.remove("hidden");
   } else {
     status.classList.add("hidden");
@@ -558,7 +561,7 @@ function onLastCall(d) {
 }
 
 function updateMpScoreDisplay() {
-  const streak = mpMyStreak >= 2 ? ` 🔥${mpMyStreak}` : "";
+  const streak = mpMyStreak >= 2 ? ` ×${mpMyStreak}` : "";
   $("score-display").textContent = `Score: ${mpMyScore}${streak}`;
 }
 
@@ -570,8 +573,8 @@ function onGuessResult(d) {
     addGuessEntry(d.title, "correct", d.title_points);
     mpMyScore += d.title_points;
     const bonuses = [];
-    if (d.order_bonus) bonuses.push(`🥇 +${d.order_bonus} first`);
-    if (d.streak_bonus) bonuses.push(`🔥 +${d.streak_bonus} streak ×${d.streak}`);
+    if (d.order_bonus) bonuses.push(`+${d.order_bonus} first`);
+    if (d.streak_bonus) bonuses.push(`+${d.streak_bonus} streak ×${d.streak}`);
     if (bonuses.length) mpAddFeed(`<span class="feed-you">You: ${bonuses.join(" · ")}</span>`);
   }
   if (d.artist_hit) {
@@ -598,11 +601,11 @@ function onPlayerGuessed(d) {
   let line;
   if (d.what === "title") {
     line = d.first
-      ? `🥇 <strong>${escapeHtml(d.name)}</strong> got the title first!`
-      : `✅ <strong>${escapeHtml(d.name)}</strong> got the title`;
-    if (d.streak >= 2) line += ` <span class="feed-streak">🔥${d.streak}</span>`;
+      ? `<strong>${escapeHtml(d.name)}</strong> got the title first!`
+      : `<strong>${escapeHtml(d.name)}</strong> got the title`;
+    if (d.streak >= 2) line += ` <span class="feed-streak">×${d.streak}</span>`;
   } else {
-    line = `🎤 <strong>${escapeHtml(d.name)}</strong> got the artist`;
+    line = `<strong>${escapeHtml(d.name)}</strong> got the artist`;
   }
   mpAddFeed(line);
 }
@@ -617,7 +620,7 @@ function mpAddFeed(html) {
 }
 
 function streakBadge(streak) {
-  return streak >= 2 ? ` <span class="streak-badge">🔥${streak}</span>` : "";
+  return streak >= 2 ? ` <span class="streak-badge">×${streak}</span>` : "";
 }
 
 function renderMpScores(leaderboard) {
@@ -625,7 +628,7 @@ function renderMpScores(leaderboard) {
   ol.innerHTML = "";
   (leaderboard || []).forEach((p) => {
     const li = document.createElement("li");
-    li.innerHTML = `<span class="mp-score-name">${p.is_host ? "👑 " : ""}${escapeHtml(p.name)}${streakBadge(p.streak)}</span>
+    li.innerHTML = `<span class="mp-score-name">${p.is_host ? CROWN : ""}${escapeHtml(p.name)}${streakBadge(p.streak)}</span>
                     <span class="mp-score-pts">${p.score}</span>`;
     ol.appendChild(li);
   });
@@ -647,7 +650,7 @@ function onRoundOver(d) {
   const multi = (d.total || 1) > 1;
 
   // Heading + round indicator
-  $("mp-result-heading").textContent = matchOver ? "🏆 Match Over" : "Round Over";
+  $("mp-result-heading").textContent = matchOver ? "Match Over" : "Round Over";
   $("mp-result-round").textContent = multi ? `Round ${d.round} of ${d.total}` : "";
   $("mp-lb-label").textContent = matchOver ? "Final standings" : "Standings";
 
@@ -658,9 +661,9 @@ function onRoundOver(d) {
   ol.innerHTML = "";
   (d.leaderboard || []).forEach((p, i) => {
     const li = document.createElement("li");
-    const medal = ["🥇", "🥈", "🥉"][i] || `${i + 1}.`;
+    const medal = `${i + 1}`;
     li.innerHTML = `<span class="lb-rank">${medal}</span>
-                    <span class="lb-name">${p.is_host ? "👑 " : ""}${escapeHtml(p.name)}${streakBadge(p.streak)}</span>
+                    <span class="lb-name">${p.is_host ? CROWN : ""}${escapeHtml(p.name)}${streakBadge(p.streak)}</span>
                     <span class="lb-score">${p.score}</span>`;
     ol.appendChild(li);
   });

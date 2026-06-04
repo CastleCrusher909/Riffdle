@@ -112,7 +112,7 @@ async function handleSearchOrStart() {
   if (cacheOnly) {
     const matches = catalogMatches(input);
     if (matches.length) startGame(watchUrl(matches[0].video_id));
-    else setError(errEl, "🎵 No song matches that yet — try 🎲 Random or 🎮 Play with friends!");
+    else setError(errEl, "No song matches that yet — try Random or Play with friends!");
     return;
   }
 
@@ -222,7 +222,7 @@ async function pollStatus(token) {
     else if (data.status === "error") {
       showScreen("screen-landing");
       const msg = data.error === "not_cached"
-        ? "🎵 That song isn't in Riffdle yet — try 🎲 Random, 🎮 multiplayer, or another song!"
+        ? "That song isn't in Riffdle yet — try Random, multiplayer, or another song!"
         : `Error: ${data.error}`;
       setError(document.getElementById("landing-error"), msg);
       return;
@@ -242,6 +242,7 @@ document.querySelectorAll("#chips-decade .chip, #chips-genre .chip").forEach((ch
 
 document.getElementById("btn-random").addEventListener("click", async () => {
   const btn = document.getElementById("btn-random");
+  const btnHTML = btn.innerHTML;   // preserve the shuffle icon
   const errEl = document.getElementById("landing-error");
   errEl.classList.add("hidden");
 
@@ -263,7 +264,7 @@ document.getElementById("btn-random").addEventListener("click", async () => {
   } catch (err) {
     setError(errEl, `Random error: ${err.message}`);
   } finally {
-    btn.textContent = "🎲 Random";
+    btn.innerHTML = btnHTML;
     btn.disabled = false;
   }
 });
@@ -391,7 +392,7 @@ function dailyShareText(obj) {
 
 function enterDailyResult(obj) {
   if (typeof masterStop === "function") masterStop();
-  document.getElementById("result-heading").textContent = `🗓️ Daily Riffdle #${obj.number}`;
+  document.getElementById("result-heading").textContent = `Daily Riffdle #${obj.number}`;
   document.getElementById("result-title").textContent = obj.title || "—";
   document.getElementById("result-artist").textContent = obj.artist ? `by ${obj.artist}` : "";
   document.getElementById("result-score").textContent = obj.score;
@@ -434,7 +435,7 @@ function startDailyCountdown() {
     const next = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1));
     let s = Math.max(0, Math.floor((next - now) / 1000));
     const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
-    el.textContent = `⏳ Next Riffdle in ${h}h ${m}m ${sec}s`;
+    el.textContent = `Next Riffdle in ${h}h ${m}m ${sec}s`;
   };
   tick();
   dailyCountdownId = setInterval(tick, 1000);
@@ -490,7 +491,7 @@ function startDailyCountdown() {
       if (!res.ok) throw new Error();
       input.value = "";
       form.classList.add("hidden");
-      msg.textContent = "✅ Thanks! Your request was sent.";
+      msg.textContent = "Thanks! Your request was sent.";
       msg.classList.remove("hidden", "error");
     } catch (_) {
       msg.textContent = "Couldn't send that — try again later.";
@@ -945,7 +946,7 @@ function showResult(title, artist) {
   masterStop();
   if (dailyMode) { finishDaily(title, artist); return; }
   // Normal single-player result (reset anything the daily view may have toggled)
-  document.getElementById("result-heading").textContent = "🎉 Song Revealed!";
+  document.getElementById("result-heading").textContent = "Song Revealed!";
   document.getElementById("daily-result").classList.add("hidden");
   document.getElementById("result-actions").classList.remove("hidden");
   document.getElementById("result-title").textContent = title || "—";
@@ -971,7 +972,7 @@ async function renderSongStats(opts = {}) {
   if (!opts.aggregateOnly) {
     // Challenge result vs the friend who shared this song
     if (challengeScore != null && challengeForVid === currentVideoId) {
-      const verdict = score > challengeScore ? "🏆 You win!"
+      const verdict = score > challengeScore ? "You win!"
                     : score === challengeScore ? "🤝 Tie!"
                     : "😅 They win";
       parts.push(`🎯 Friend: <strong>${challengeScore}</strong> · You: <strong>${score}</strong> — ${verdict}`);
