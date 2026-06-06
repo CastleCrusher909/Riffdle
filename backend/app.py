@@ -834,6 +834,39 @@ def submit_guess():
     })
 
 
+def _first_letter(s):
+    """First alphanumeric character of a string, uppercased (skips quotes etc.)."""
+    for ch in (s or ""):
+        if ch.isalnum():
+            return ch.upper()
+    return "?"
+
+
+@app.route("/api/hint/<session_id>/<int:n>")
+def game_hint(session_id, n):
+    """Return a single progressive hint derived from the song metadata.
+
+    Never exposes the full title or artist — only a word count or a first
+    letter. The client owns hint ordering and point costs.
+      n=1 → number of words in the title
+      n=2 → first letter of the artist's name
+      n=3 → first letter of the title
+    """
+    game = games.get(session_id)
+    if not game or game["status"] != "ready":
+        return jsonify({"error": "Session not ready"}), 400
+
+    title = game.get("title") or ""
+    artist = game.get("artist") or ""
+    if n == 1:
+        return jsonify({"n": 1, "kind": "word_count", "value": len(title.split())})
+    if n == 2:
+        return jsonify({"n": 2, "kind": "artist_initial", "value": _first_letter(artist)})
+    if n == 3:
+        return jsonify({"n": 3, "kind": "title_initial", "value": _first_letter(title)})
+    return jsonify({"error": "Invalid hint"}), 400
+
+
 SONGS = json.loads((BASE_DIR / "backend" / "songs.json").read_text())
 
 

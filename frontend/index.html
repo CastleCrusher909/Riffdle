@@ -440,11 +440,13 @@
 
     <!-- Guess area -->
     <div class="guess-area">
+      <div id="hint-list" class="hint-list"></div>
       <div class="guess-form">
         <input id="guess-input" type="text" placeholder="Song title or artist…" autocomplete="off" />
         <button id="btn-guess">Guess</button>
         <button id="btn-skip" class="btn-skip">Skip</button>
       </div>
+      <button id="btn-hint" class="btn-hint">💡 Hint</button>
       <p id="artist-bonus" class="artist-bonus hidden">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
         Got it! Now name the artist for a bonus.
@@ -464,6 +466,7 @@
       <p class="final-score">Final score: <strong id="result-score"></strong></p>
       <div id="result-grid" class="daily-grid hidden"></div>
       <p id="result-stats" class="result-stats hidden"></p>
+      <div id="result-hints" class="result-hints hidden"></div>
       <div id="result-actions" class="result-actions">
         <button id="btn-play-again">Play again</button>
         <div class="share-row">
@@ -498,6 +501,20 @@
         </div>
         <p id="daily-countdown" class="daily-countdown"></p>
         <button id="btn-daily-home" class="btn-secondary">← Back to menu</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast (hint feedback) -->
+  <div id="toast" class="toast hidden"></div>
+
+  <!-- Hint confirmation popup -->
+  <div id="hint-confirm" class="modal-overlay hidden">
+    <div class="modal-card">
+      <p id="hint-confirm-text">Use hint?</p>
+      <div class="modal-actions">
+        <button id="hint-confirm-cancel" class="btn-secondary">Cancel</button>
+        <button id="hint-confirm-ok">Use hint</button>
       </div>
     </div>
   </div>

@@ -24,6 +24,13 @@ let resultArtist = null;
 let pollToken = 0;       // incremented to cancel stale poll loops
 let revealLocked = false; // debounce guard — prevents double-firing the reveal button
 
+// ── Hints ─────────────────────────────────────────────────────
+// Up to 3 per round; 1st free, 2nd −75 pts, 3rd −150 pts.
+const HINT_COSTS = [0, 75, 150];   // cost of the 1st, 2nd, 3rd hint
+let hintsUsed = 0;
+let hintTotalCost = 0;
+let hintsLog = [];       // [{ text, cost }] of hints revealed this round
+
 // ── Screen helpers ────────────────────────────────────────────
 function showScreen(id) {
   document.querySelectorAll(".screen").forEach((s) => s.classList.remove("active"));
@@ -463,6 +470,9 @@ function finishDaily(title, artist) {
     title,
     artist,
     total,
+    hintsUsed,
+    hintCost: hintTotalCost,
+    hints: hintsLog.map((h) => h.text),
   };
   try { localStorage.setItem(dailyKey(dailyNumber), JSON.stringify(obj)); } catch (_) {}
   recordStreak(dailyNumber);
@@ -496,6 +506,7 @@ function enterDailyResult(obj) {
   document.getElementById("result-grid").classList.add("hidden");
   const dr = document.getElementById("daily-result");
   dr.classList.remove("hidden");
+  renderHintsSummary(obj.hintsUsed || 0, obj.hintCost || 0, obj.hints || []);
   renderStreakResult();
   document.getElementById("daily-grid").innerHTML =
     `${dailyGrid(obj)}<div class="daily-grid-sub">${obj.solved ? "Solved in " + obj.stems + "/" + obj.total + " stems" : "Not guessed"}</div>`;
@@ -836,6 +847,13 @@ function initGame(stems) {
   for (const k in bufferPromises) delete bufferPromises[k];
   cancelAnimationFrame(rafId);
 
+  // Reset hints for the new round
+  hintsUsed = 0;
+  hintTotalCost = 0;
+  hintsLog = [];
+  document.getElementById("hint-list").innerHTML = "";
+  updateHintButton();
+
   document.getElementById("artist-bonus").classList.add("hidden");
   document.getElementById("guess-log").innerHTML = "";
   document.getElementById("score-display").textContent = "Score: 0";
@@ -946,6 +964,113 @@ document.getElementById("btn-skip").addEventListener("click", () => {
   if (stemsRevealed < activeStemOrder.length) revealNextStem();
   else showAnswer();
 });
+
+// ── Hints ─────────────────────────────────────────────────────
+const HINT_ICO = '<svg class="hint-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10.5c.7.7 1 1.4 1 2.5h6c0-1.1.3-1.8 1-2.5A6 6 0 0 0 12 3Z"/></svg>';
+
+function updateHintButton() {
+  const btn = document.getElementById("btn-hint");
+  if (!btn) return;
+  if (hintsUsed >= HINT_COSTS.length) {
+    btn.disabled = true;
+    btn.textContent = "💡 No hints left";
+    return;
+  }
+  btn.disabled = false;
+  const cost = HINT_COSTS[hintsUsed];
+  btn.textContent = cost > 0 ? `💡 Hint (-${cost} pts)` : "💡 Hint";
+}
+
+function hintText(kind, value) {
+  if (kind === "word_count") return `The title has ${value} word${value === 1 ? "" : "s"}.`;
+  if (kind === "artist_initial") return `The artist's name starts with “${value}”.`;
+  if (kind === "title_initial") return `The title starts with “${value}”.`;
+  return "";
+}
+
+function renderHintList() {
+  document.getElementById("hint-list").innerHTML = hintsLog.map((h) =>
+    `<div class="hint-box">${HINT_ICO}<span class="hint-text">${escapeHtml(h.text)}</span>` +
+    (h.cost > 0 ? `<span class="hint-cost">−${h.cost}</span>` : `<span class="hint-free">Free</span>`) +
+    `</div>`
+  ).join("");
+}
+
+async function revealHint() {
+  if (gameOver || hintsUsed >= HINT_COSTS.length) return;
+  const n = hintsUsed + 1;            // 1-indexed hint number for the API
+  const cost = HINT_COSTS[hintsUsed];
+  let data;
+  try {
+    data = await fetch(`${API}/hint/${sessionId}/${n}`).then((r) => r.json());
+  } catch (_) { return; }
+  if (!data || data.error) return;
+
+  if (cost > 0) {
+    score -= cost;
+    document.getElementById("score-display").textContent = `Score: ${score}`;
+  }
+  hintsUsed++;
+  hintTotalCost += cost;
+  hintsLog.push({ text: hintText(data.kind, data.value), cost });
+  renderHintList();
+  updateHintButton();
+}
+
+function onHintClick() {
+  if (window.mpActive || gameOver || hintsUsed >= HINT_COSTS.length) return;
+  if (hintsUsed === 0) {
+    revealHint();
+    showToast("Free hint!");
+  } else {
+    showHintConfirm(HINT_COSTS[hintsUsed], revealHint);
+  }
+}
+document.getElementById("btn-hint").addEventListener("click", onHintClick);
+
+// Small transient toast (used for the free-hint feedback)
+let toastTimer = null;
+function showToast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.classList.remove("hidden");
+  requestAnimationFrame(() => t.classList.add("show"));
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => {
+    t.classList.remove("show");
+    setTimeout(() => t.classList.add("hidden"), 300);
+  }, 1800);
+}
+
+// Confirmation popup for paid hints
+function showHintConfirm(cost, onConfirm) {
+  const overlay = document.getElementById("hint-confirm");
+  document.getElementById("hint-confirm-text").textContent = `Use hint? Costs ${cost} points.`;
+  const ok = document.getElementById("hint-confirm-ok");
+  const cancel = document.getElementById("hint-confirm-cancel");
+  overlay.classList.remove("hidden");
+  const close = () => {
+    overlay.classList.add("hidden");
+    ok.removeEventListener("click", okH);
+    cancel.removeEventListener("click", cancelH);
+    overlay.removeEventListener("click", bgH);
+  };
+  const okH = () => { close(); onConfirm(); };
+  const cancelH = () => close();
+  const bgH = (e) => { if (e.target === overlay) close(); };
+  ok.addEventListener("click", okH);
+  cancel.addEventListener("click", cancelH);
+  overlay.addEventListener("click", bgH);
+}
+
+// Fill the result-screen hint summary from a {used, cost, hints:[text]} object.
+function renderHintsSummary(used, cost, hints) {
+  const el = document.getElementById("result-hints");
+  if (!used) { el.classList.add("hidden"); el.innerHTML = ""; return; }
+  const lines = (hints || []).map((t) => `• ${escapeHtml(t)}`).join("<br>");
+  el.innerHTML = `<span class="rh-head">Hints used: ${used} (−${cost} pts)</span><br>${lines}`;
+  el.classList.remove("hidden");
+}
 
 async function submitGuess() {
   if (window.mpActive) return;   // multiplayer handles its own guessing (mp.js)
@@ -1065,6 +1190,7 @@ function showResult(title, artist) {
   grid.innerHTML = `${emojiGrid(playerSolveStems !== null, playerSolveStems, total)}` +
     `<div class="daily-grid-sub">${playerSolveStems !== null ? "Solved in " + playerSolveStems + "/" + total + " stems" : "Not guessed"}</div>`;
   grid.classList.remove("hidden");
+  renderHintsSummary(hintsUsed, hintTotalCost, hintsLog.map((h) => h.text));
   showScreen("screen-result");
   renderSongStats();
 }
