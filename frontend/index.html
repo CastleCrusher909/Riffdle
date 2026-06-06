@@ -59,6 +59,11 @@
       </header>
 
       <div class="play-card">
+        <div id="streak-badge" class="streak-badge hidden">
+          <svg class="streak-flame" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2c.4 2.6 2.2 4 3.4 5.5C16.6 9 17.5 10.6 17.5 13a5.5 5.5 0 0 1-11 0c0-1.6.6-2.9 1.5-3.9.2 1.3 1 2 1.9 2 .5 0 .9-.4.9-1.1 0-1.6-1.4-2.6-.8-4.6C10.1 4.1 11 3 12 2Z"/></svg>
+          <span id="streak-count">0</span>
+          <span class="streak-label">day streak</span>
+        </div>
         <button id="btn-daily" class="btn-daily">
           <svg class="btn-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="16" rx="2.5"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4"/></svg>
           <span class="btn-daily-text">
@@ -475,6 +480,10 @@
 
       <!-- Daily-challenge result (shown instead of the actions above in daily mode) -->
       <div id="daily-result" class="daily-result hidden">
+        <div id="daily-streak" class="daily-streak hidden">
+          <div class="streak-headline"><span class="streak-fire">🔥</span> <span class="streak-words"><span id="streak-current-big">0</span> day streak!</span></div>
+          <div class="streak-detail">Best streak: <span id="streak-best">0</span></div>
+        </div>
         <div id="daily-grid" class="daily-grid"></div>
         <p id="daily-stats" class="result-stats hidden"></p>
         <div class="share-row">

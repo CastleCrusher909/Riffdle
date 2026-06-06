@@ -28,6 +28,8 @@ let revealLocked = false; // debounce guard — prevents double-firing the revea
 function showScreen(id) {
   document.querySelectorAll(".screen").forEach((s) => s.classList.remove("active"));
   document.getElementById(id).classList.add("active");
+  if (id === "screen-landing" && typeof refreshStreakUI === "function") refreshStreakUI();
+  else if (id !== "screen-landing" && landingCountdownId) clearInterval(landingCountdownId);
 }
 
 function setError(el, msg) {
@@ -334,6 +336,97 @@ document.getElementById("logo-home").addEventListener("click", () => {
 // ── Daily Challenge ───────────────────────────────────────────
 const dailyKey = (n) => `riffdle-daily-${n}`;
 
+// ── Daily streak ──────────────────────────────────────────────
+// localStorage `riffdle-streak` = { current, best, lastDay } where lastDay is
+// the daily number (deterministic UTC day index) the user last completed.
+const STREAK_KEY = "riffdle-streak";
+let todayDailyNumber = null;     // today's daily number, once fetched
+let landingCountdownId = null;   // "Come back tomorrow" ticker on the home screen
+
+function loadStreak() {
+  try {
+    const s = JSON.parse(localStorage.getItem(STREAK_KEY));
+    if (s && typeof s === "object") return { current: s.current || 0, best: s.best || 0, lastDay: s.lastDay ?? null };
+  } catch (_) {}
+  return { current: 0, best: 0, lastDay: null };
+}
+function saveStreak(s) { try { localStorage.setItem(STREAK_KEY, JSON.stringify(s)); } catch (_) {} }
+
+// Streak still counts as alive if completed today or yesterday; otherwise it's broken.
+function effectiveStreak(s, today) {
+  if (today == null || s.lastDay == null) return s.current || 0;
+  if (s.lastDay === today || s.lastDay === today - 1) return s.current || 0;
+  return 0;
+}
+
+// Record completion of daily #today; returns the updated streak object.
+function recordStreak(today) {
+  if (today == null) return loadStreak();
+  const s = loadStreak();
+  if (s.lastDay === today) {
+    // already counted today — leave current as-is
+  } else if (s.lastDay === today - 1) {
+    s.current = (s.current || 0) + 1;   // consecutive day
+  } else {
+    s.current = 1;                       // first play or a missed day resets to 1
+  }
+  s.best = Math.max(s.best || 0, s.current);
+  s.lastDay = today;
+  saveStreak(s);
+  return s;
+}
+
+function fmtCountdown() {
+  const now = new Date();
+  const next = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1));
+  let sec = Math.max(0, Math.floor((next - now) / 1000));
+  const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60;
+  return `${h}h ${m}m ${s}s`;
+}
+
+// Refresh the home-screen streak badge + daily-button "played today" state.
+function refreshStreakUI() {
+  const s = loadStreak();
+  const eff = effectiveStreak(s, todayDailyNumber);
+  const badge = document.getElementById("streak-badge");
+  if (eff > 0) {
+    document.getElementById("streak-count").textContent = eff;
+    badge.classList.remove("hidden");
+  } else {
+    badge.classList.add("hidden");
+  }
+
+  const btn = document.getElementById("btn-daily");
+  const title = btn.querySelector(".btn-daily-title");
+  const sub = btn.querySelector(".btn-daily-sub");
+  const playedToday = todayDailyNumber != null && localStorage.getItem(dailyKey(todayDailyNumber)) != null;
+  clearInterval(landingCountdownId);
+  if (playedToday) {
+    btn.classList.add("played");
+    title.textContent = "Come back tomorrow";
+    const tick = () => { sub.textContent = `Next Riffdle in ${fmtCountdown()}`; };
+    tick();
+    landingCountdownId = setInterval(tick, 1000);
+  } else {
+    btn.classList.remove("played");
+    title.textContent = "Daily Challenge";
+    sub.textContent = "One song · everyone · today";
+  }
+}
+
+// Populate the streak update block on the daily result screen.
+function renderStreakResult() {
+  const s = loadStreak();
+  const block = document.getElementById("daily-streak");
+  if ((s.current || 0) > 0) {
+    document.getElementById("streak-current-big").textContent = s.current;
+    document.getElementById("streak-best").textContent = s.best || s.current;
+    block.classList.remove("hidden");
+  } else {
+    block.classList.add("hidden");
+  }
+}
+
 async function startDaily() {
   const btn = document.getElementById("btn-daily");
   const errEl = document.getElementById("landing-error");
@@ -343,6 +436,7 @@ async function startDaily() {
     const d = await fetch(`${API}/daily`).then((r) => r.json());
     if (!d.video_id) throw new Error(d.error || "No daily yet");
     dailyNumber = d.number;   // so Share works even when viewing a saved result
+    todayDailyNumber = d.number;
     currentVideoId = d.video_id;   // so the stats line can load on a saved result
     const saved = localStorage.getItem(dailyKey(d.number));
     if (saved) {
@@ -371,6 +465,7 @@ function finishDaily(title, artist) {
     total,
   };
   try { localStorage.setItem(dailyKey(dailyNumber), JSON.stringify(obj)); } catch (_) {}
+  recordStreak(dailyNumber);
   enterDailyResult(obj);
 }
 
@@ -401,6 +496,7 @@ function enterDailyResult(obj) {
   document.getElementById("result-grid").classList.add("hidden");
   const dr = document.getElementById("daily-result");
   dr.classList.remove("hidden");
+  renderStreakResult();
   document.getElementById("daily-grid").innerHTML =
     `${dailyGrid(obj)}<div class="daily-grid-sub">${obj.solved ? "Solved in " + obj.stems + "/" + obj.total + " stems" : "Not guessed"}</div>`;
   renderSongStats({ aggregateOnly: true, targetId: "daily-stats" });
@@ -453,6 +549,17 @@ function startDailyCountdown() {
     if (!isNaN(s) && s > 0) { challengeScore = s; challengeForVid = videoId; }
     startGame(watchUrl(videoId));
   }
+})();
+
+// Fetch today's daily number on load so the streak badge + "played today"
+// state show on the home screen without waiting for a click.
+(() => {
+  if (new URLSearchParams(location.search).get("room")) return;   // multiplayer owns the page
+  refreshStreakUI();   // show any alive streak immediately from localStorage
+  fetch(`${API}/daily`)
+    .then((r) => r.json())
+    .then((d) => { if (d && d.number != null) { todayDailyNumber = d.number; refreshStreakUI(); } })
+    .catch(() => {});
 })();
 
 // ── Request a song ────────────────────────────────────────────

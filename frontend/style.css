@@ -919,6 +919,63 @@ body.mp #challenge-note { display: none; }
   margin: 0;
 }
 
+/* ── Daily streak ───────────────────────────────────────────── */
+.streak-badge {
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #ffd9a8;
+  background: linear-gradient(135deg, rgba(249, 115, 22, 0.18), rgba(234, 88, 12, 0.12));
+  border: 1px solid rgba(249, 115, 22, 0.35);
+}
+.streak-badge .streak-flame {
+  width: 16px;
+  height: 16px;
+  color: #fb923c;
+  filter: drop-shadow(0 0 4px rgba(251, 146, 60, 0.6));
+}
+.streak-badge #streak-count { font-size: 0.95rem; color: #fff; }
+.streak-badge .streak-label { color: #ffd9a8; opacity: 0.85; }
+
+/* Daily button "played today" state */
+.btn-daily.played {
+  background: linear-gradient(135deg, var(--surface2), var(--surface));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.06);
+  cursor: default;
+}
+.btn-daily.played:hover { transform: none; box-shadow: inset 0 1px 0 rgba(255,255,255,0.06); }
+.btn-daily.played:hover::after { left: -60%; }
+.btn-daily.played .btn-chevron { display: none; }
+
+/* Streak update block on the daily result screen */
+.daily-streak {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  margin-bottom: 0.25rem;
+}
+.daily-streak .streak-headline {
+  font-size: 1.5rem;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.daily-streak .streak-words {
+  background: linear-gradient(135deg, #fb923c, #f97316);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.daily-streak .streak-detail { color: var(--muted); font-size: 0.9rem; }
+.daily-streak .streak-detail #streak-best { color: var(--text); font-weight: 600; }
+
 /* "Play with friends" entry — match the random section's spacing */
 .mp-entry {
   margin-top: 1.5rem;
