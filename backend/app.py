@@ -650,6 +650,16 @@ def process_game(session_id: str, url: str):
         cached = load_cache(video_id) if video_id else None
         played_vid = video_id if cached else None   # id of the song actually loaded
 
+        # On the hosted deploy, the direct R2 lookup above is the ONLY path allowed.
+        # Bail out before any YouTube contact — metadata fetches from a datacenter IP
+        # get bot-blocked (403), which is the error players were hitting. Step 2's
+        # title-based match needs YouTube anyway, so it can't help here.
+        if not cached and CACHE_ONLY:
+            log_song_request(url)
+            games[session_id]["status"] = "error"
+            games[session_id]["error"] = "not_cached"
+            return
+
         # 2. Miss → fetch metadata and match the same song from any other upload.
         meta = None
         if not cached:
@@ -680,15 +690,7 @@ def process_game(session_id: str, url: str):
             update_stats(played_vid, plays=1)
             return
 
-        # ── Cache miss ────────────────────────────────────────────
-        # Hosted deploy can't download new songs (YouTube blocks datacenter IPs),
-        # so fail gracefully and note the request for later.
-        if CACHE_ONLY:
-            log_song_request(meta["title"] if meta else url)
-            games[session_id]["status"] = "error"
-            games[session_id]["error"] = "not_cached"
-            return
-
+        # ── Cache miss (local only — CACHE_ONLY already returned above) ──
         # ── Full pipeline (local Mac / Modal) ─────────────────────
         games[session_id]["status"] = "separating"
 
