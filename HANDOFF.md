@@ -21,9 +21,11 @@ real-time multiplayer, plus a daily challenge.
 3. **Separation** — local Mac **Demucs** (MPS GPU) is the active path for adding songs.
    A **Modal** GPU function (`modal_separate.py`) is deployed but dormant.
 
-The hosted site runs **cache-only** (`RIFFDLE_CACHE_ONLY=1`): it never downloads new
-songs (YouTube blocks datacenter IPs). New songs are added by the owner running
-locally on a Mac (residential IP), which uploads to R2 → instantly live on the host.
+The hosted site runs **cache-only** (`RIFFDLE_CACHE_ONLY=1`): it never contacts YouTube
+at all (datacenter IPs get bot-blocked). On a cache miss it returns `not_cached`
+immediately after the direct video-id→R2 lookup — see the cache-only quirk below. New
+songs are added by the owner running locally on a Mac (residential IP), which uploads to
+R2 → instantly live on the host.
 
 ---
 
@@ -113,6 +115,17 @@ Also works to add a one-off by running the app locally (no CACHE_ONLY) and searc
 - **Daily Challenge:** same song for everyone each day (deterministic by UTC date from
   `DAILY_LAUNCH` 2026-06-03; no repeats until the catalog cycles). One play/day (locked,
   re-opening shows your saved result). Heardle-style emoji-grid share + countdown.
+- **Daily streak:** localStorage `riffdle-streak` `{current,best,lastDay}` (lastDay = the
+  daily *number* last completed). Flame badge on the home screen; "🔥 X day streak!" + best
+  on the daily result; once played today the daily button shows "Come back tomorrow" + a
+  live countdown (stays clickable to review the saved result). Consecutive-day increment,
+  resets after a missed day. Frontend-only (`app.js`).
+- **Hint system (single-player only):** up to 3 hints/round — 1st free, 2nd −75 pts, 3rd
+  −150 pts. Reveals least→most helpful: title word count → artist initial → title initial.
+  First hint is instant w/ a "Free hint!" toast; paid hints show a confirm popup. Hints
+  stack in styled boxes above the guess input; the result screen lists hints used + total
+  deducted. Backend `GET /api/hint/<session>/<n>` returns only a derivative (count / first
+  letter) — **never** the full title or artist. Hidden in multiplayer (server-side scoring).
 - **Guess matching** (`is_match` / `artist_match` in app.py): forgiving of `&`↔`and`,
   punctuation, spacing, `D.A.N.C.E.`-style acronyms; accepts **any one credited artist**
   for featured collabs (e.g. "jay z" for "Beyoncé ft. Jay-Z") but NOT `&`-joined bands.
@@ -134,8 +147,8 @@ Also works to add a one-off by running the app locally (no CACHE_ONLY) and searc
 ## API quick reference
 
 `/` · `POST /api/start` · `/api/status/<id>` · `/api/stem/<id>/<stem>` ·
-`POST /api/guess` · `/api/answer/<id>` · `/api/search` · `/api/random` · `/api/songs` ·
-`/api/catalog` · `/api/daily` · `/api/stats/<video_id>` · `POST /api/request` · `/api/health`
+`POST /api/guess` · `/api/answer/<id>` · `/api/hint/<id>/<n>` · `/api/search` · `/api/random` ·
+`/api/songs` · `/api/catalog` · `/api/daily` · `/api/stats/<video_id>` · `POST /api/request` · `/api/health`
 
 **SocketIO** (client→) create_room, join_room_req, update_filters, set_timer, set_rounds,
 start_game, guess, skip_request, abort_game, play_again ·
@@ -151,6 +164,10 @@ last_call, player_guessed, scores_update, guess_result, round_over, game_aborted
 - Downloads force the `android_vr` player client (cookies make yt-dlp prefer `web`, whose formats fail).
 - Web Audio only — never reintroduce `<audio>` elements (they drift).
 - In-memory multiplayer state (`rooms` dict) → must stay **1 worker**.
+- **Cache-only must short-circuit before any YouTube call.** `process_game` checks
+  `CACHE_ONLY` right after the direct `video_id`→R2 `load_cache` lookup and returns
+  `not_cached` — *before* `get_video_meta()`. Earlier this guard ran one step too late, so
+  a cache miss still made a yt-dlp metadata call → 403 bot-block from Render. Don't move it.
 - `bootstrap_index()` pulls `song_index.json` from R2 on boot (a local rebuild would wipe it).
 - Render free tier sleeps after ~15 min idle (~50s cold start). A full month of uptime is
   ~730–744 hrs vs the ~750-hr free budget, so a single uptime pinger can keep it warm.
@@ -162,7 +179,10 @@ last_call, player_guessed, scores_update, guess_result, round_over, game_aborted
 ## Open items / ideas
 
 - Multiplayer in-game HUD (scoreboard/feed) got light frosting — could use a deeper visual pass.
-- Daily **streak counter** (local) would add retention.
+- Hints are single-player only — a multiplayer version would need server-side scoring + a
+  socket event (bigger change; MP scoring is authoritative on the server).
 - Auto-cleanup of the yt-dlp "artist = channel name" quirk in the cache pipeline.
+- `VALID_DECADES` starts at 70s (no 60s bucket) — `add <#> 60s <genre>` silently promotes
+  *untagged*. Add `"60s"` to `manage_requests.py` + a 60s Random filter chip if wanted.
 - `songs.json` has a duplicate "Crazy in Love" (cosmetic).
 - Optionally wire `song_queue.json` filters so Random can draw from non-songs.json cached songs by genre (catalog already carries decade/genre).
