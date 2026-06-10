@@ -581,89 +581,149 @@ input:focus { outline: none; border-bottom-color: var(--red); }
   margin: -0.5rem 0 1rem;
 }
 
-/* Stems */
+/* Stems — the console. Four channel strips; revealing brings one up in the mix. */
 .stems-panel {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.7rem;
-  margin-bottom: 1rem;
+  border: var(--rule);
+  margin-bottom: 1.1rem;
 }
 .stem-card {
   --stem: var(--ink);
   position: relative;
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  min-height: 64px;
-  padding: 0.8rem 0.9rem 0.8rem 1.1rem;
-  border: 1.5px dashed var(--hairline);
+  gap: 0.7rem;
+  min-height: 58px;
+  padding: 0.5rem 0.9rem;
+  border-bottom: 1px solid var(--hairline);
   color: var(--ink-faint);
+  transition: color 0.35s ease, padding-left 0.35s ease, box-shadow 0.35s ease;
 }
+.stem-card:last-child { border-bottom: none; }
 #stem-drums  { --stem: var(--red); }
 #stem-bass   { --stem: var(--cobalt); }
 #stem-melody { --stem: var(--mustard); }
 #stem-vocals { --stem: var(--forest); }
 
+/* Locked strips read as "off" — a faint dashed ghost lane */
 .stem-card.unlocked {
-  border: var(--rule);
   color: var(--ink);
-  box-shadow: inset 7px 0 0 var(--stem);
+  padding-left: 1.2rem;
+  box-shadow: inset 6px 0 0 var(--stem);
 }
-.stem-icon { width: 30px; height: 30px; flex-shrink: 0; }
+
+.stem-ch {
+  font-family: var(--mono);
+  font-weight: 700;
+  font-size: 0.58rem;
+  letter-spacing: 0.1em;
+  color: var(--ink-faint);
+  flex-shrink: 0;
+  width: 2.4em;
+}
+.stem-card.unlocked .stem-ch { color: var(--stem); }
+
+.stem-icon { width: 26px; height: 26px; flex-shrink: 0; }
 .stem-icon svg { width: 100%; height: 100%; }
 .stem-card.unlocked .stem-icon { color: var(--stem); }
+
 .stem-label {
   font-family: var(--mono);
   font-weight: 700;
-  font-size: 0.78rem;
+  font-size: 0.74rem;
   letter-spacing: 0.12em;
   text-transform: uppercase;
+  flex-shrink: 0;
+  min-width: 4.6em;
 }
-.stem-lock {
+
+/* The lane — empty when off, floods with the stem ink on reveal */
+.stem-lane {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  height: 26px;
+  overflow: hidden;
+}
+.stem-lane::after {        /* "no signal" baseline while locked */
+  content: "";
   position: absolute;
-  right: 0.85rem;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 17px;
-  height: 17px;
-  transition: opacity 0.3s ease;
+  left: 0; right: 0; top: 50%;
+  border-top: 1.5px dashed var(--hairline);
 }
-.stem-lock svg { width: 100%; height: 100%; }
-.stem-card.unlocked .stem-lock { opacity: 0; }
+.stem-card.unlocked .stem-lane::after { display: none; }
+.stem-lane::before {       /* the print wipe — the reveal moment */
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: color-mix(in srgb, var(--stem) 15%, transparent);
+  transform: scaleX(0);
+  transform-origin: left center;
+}
+.stem-card.unlocked .stem-lane::before {
+  animation: stemPrint 0.55s cubic-bezier(0.2, 0.7, 0.3, 1) forwards;
+}
+@keyframes stemPrint { to { transform: scaleX(1); } }
 
 .stem-eq {
   position: absolute;
-  right: 0.85rem;
-  top: 50%;
-  transform: translateY(-50%);
+  inset: 0;
   display: flex;
-  align-items: flex-end;
-  gap: 3px;
-  height: 20px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2px;
   opacity: 0;
-  transition: opacity 0.3s ease;
   pointer-events: none;
 }
-.stem-card.unlocked .stem-eq { opacity: 1; }
+.stem-card.unlocked .stem-eq { animation: eqIn 0.4s 0.28s ease forwards; }
+@keyframes eqIn { to { opacity: 1; } }
 .stem-eq span {
-  width: 4px;
+  flex: 1 1 0;
+  max-width: 4px;
   height: 100%;
   background: var(--stem);
-  transform: scaleY(0.2);
-  transform-origin: bottom;
+  transform: scaleY(0.3);
+  transform-origin: center;
 }
-.stem-eq span:nth-child(2) { transform: scaleY(0.34); }
-.stem-eq span:nth-child(3) { transform: scaleY(0.26); }
-.stem-eq span:nth-child(4) { transform: scaleY(0.4); }
-body:has(#btn-play-all.playing) .stem-card.unlocked .stem-eq span { animation: eqDance 0.9s ease-in-out infinite; }
-body:has(#btn-play-all.playing) .stem-card.unlocked .stem-eq span:nth-child(1) { animation-duration: 0.82s; }
-body:has(#btn-play-all.playing) .stem-card.unlocked .stem-eq span:nth-child(2) { animation-duration: 0.66s; animation-delay: 0.12s; }
-body:has(#btn-play-all.playing) .stem-card.unlocked .stem-eq span:nth-child(3) { animation-duration: 0.94s; animation-delay: 0.22s; }
-body:has(#btn-play-all.playing) .stem-card.unlocked .stem-eq span:nth-child(4) { animation-duration: 0.74s; animation-delay: 0.05s; }
+/* frozen waveform when paused — an 8-step pattern reads as real audio */
+.stem-eq span:nth-child(8n+1) { transform: scaleY(0.55); }
+.stem-eq span:nth-child(8n+2) { transform: scaleY(0.92); }
+.stem-eq span:nth-child(8n+3) { transform: scaleY(0.46); }
+.stem-eq span:nth-child(8n+4) { transform: scaleY(0.74); }
+.stem-eq span:nth-child(8n+5) { transform: scaleY(0.62); }
+.stem-eq span:nth-child(8n+6) { transform: scaleY(0.44); }
+.stem-eq span:nth-child(8n+7) { transform: scaleY(0.82); }
+.stem-eq span:nth-child(8n+8) { transform: scaleY(0.52); }
+/* dance when the mix is playing */
+body:has(#btn-play-all.playing) .stem-card.unlocked .stem-eq span {
+  animation: eqDance 0.85s ease-in-out infinite;
+}
+body:has(#btn-play-all.playing) .stem-card.unlocked .stem-eq span:nth-child(4n+1) { animation-duration: 0.82s; animation-delay: 0s; }
+body:has(#btn-play-all.playing) .stem-card.unlocked .stem-eq span:nth-child(4n+2) { animation-duration: 0.66s; animation-delay: 0.12s; }
+body:has(#btn-play-all.playing) .stem-card.unlocked .stem-eq span:nth-child(4n+3) { animation-duration: 0.94s; animation-delay: 0.22s; }
+body:has(#btn-play-all.playing) .stem-card.unlocked .stem-eq span:nth-child(4n+4) { animation-duration: 0.74s; animation-delay: 0.05s; }
 @keyframes eqDance {
-  0%, 100% { transform: scaleY(0.22); }
+  0%, 100% { transform: scaleY(0.18); }
   50%      { transform: scaleY(1); }
 }
+
+/* lock / live state at the right edge */
+.stem-state {
+  position: relative;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+.stem-state svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transition: opacity 0.3s ease;
+}
+.stem-lock { color: var(--ink-faint); }
+.stem-live { color: var(--stem); opacity: 0; }
+.stem-card.unlocked .stem-lock { opacity: 0; }
+.stem-card.unlocked .stem-live { opacity: 1; }
 
 /* Player */
 .master-player {
