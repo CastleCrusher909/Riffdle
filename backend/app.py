@@ -258,20 +258,13 @@ def _loose(s: str) -> str:
     return re.sub(r"\s+", " ", s).strip()
 
 
-def is_match(guess: str, target: str) -> bool:
-    """
-    True if guess meaningfully matches target.
-    Parentheticals are stripped from the target before comparing so that
-    "(From '8 Mile' Soundtrack)" or "(Radio Edit)" don't inflate the length
-    and block correct guesses. Both sides are normalized (& vs and, punctuation,
-    spacing) so "earth wind and fire" matches "Earth Wind & Fire".
-    Substring matches require the guess to cover at least 60% of the stripped
-    target so that single words from long titles don't count.
-    The reverse direction (target inside a longer guess) is always fine.
-    """
-    clean = re.sub(r"\s*[\(\[].*?[\)\]]", "", target).strip()
-    g = _loose(guess)
-    c = _loose(clean)
+# A trailing featured-credit clause baked into a title/credit string —
+# "Uptown Funk ft. Bruno Mars" → base "Uptown Funk".
+_FEAT_TAIL = re.compile(r"\s+(?:featuring|feat|ft)\.?\s+.*$", re.IGNORECASE)
+
+
+def _match_norm(g: str, c: str) -> bool:
+    """Core comparison on already-_loose()d strings."""
     if not g or not c:
         return False
     gt, ct = g.replace(" ", ""), c.replace(" ", "")   # space-insensitive form (e.g. D.A.N.C.E.)
@@ -284,21 +277,53 @@ def is_match(guess: str, target: str) -> bool:
     return fuzzy_match(g, c)
 
 
+def is_match(guess: str, target: str) -> bool:
+    """
+    True if guess meaningfully matches target.
+    Parentheticals are stripped from the target before comparing so that
+    "(From '8 Mile' Soundtrack)" or "(Radio Edit)" don't inflate the length
+    and block correct guesses. Both sides are normalized (& vs and, punctuation,
+    spacing) so "earth wind and fire" matches "Earth Wind & Fire".
+    Substring matches require the guess to cover at least 60% of the stripped
+    target so that single words from long titles don't count.
+    The reverse direction (target inside a longer guess) is always fine.
+    Targets with a baked-in featured credit ("Uptown Funk ft. Bruno Mars")
+    are also matched against their base form ("Uptown Funk").
+    """
+    clean = re.sub(r"\s*[\(\[].*?[\)\]]", "", target).strip()
+    g = _loose(guess)
+    if _match_norm(g, _loose(clean)):
+        return True
+    base = _FEAT_TAIL.sub("", clean).strip()
+    if base and base != clean:
+        return _match_norm(g, _loose(base))
+    return False
+
+
 # Split a credit string into individually-named performers. Splits on
 # feat./ft./featuring and commas/slashes — but NOT '&' (so band names like
 # "Earth Wind & Fire" or "Hall & Oates" stay whole).
 _FEAT_SPLIT = re.compile(r"\s+(?:feat\.?|ft\.?|featuring)\s+|\s*[,/;]\s*", re.IGNORECASE)
 
 
-def artist_match(guess: str, artist: str) -> bool:
+# Performers credited inside a *title* — "Uptown Funk ft. Bruno Mars" or
+# "Old Town Road (feat. Billy Ray Cyrus)". Captures the names after the marker.
+_TITLE_FEAT = re.compile(r"\b(?:featuring|feat|ft)\.?\s+([^\(\)\[\]]+)", re.IGNORECASE)
+
+
+def artist_match(guess: str, artist: str, title: str = "") -> bool:
     """Match the artist, accepting any one credited performer for featured
-    collabs — e.g. 'jay z' or 'beyonce' both match 'Beyoncé ft. Jay-Z'."""
+    collabs — e.g. 'jay z' or 'beyonce' both match 'Beyoncé ft. Jay-Z'.
+    Performers credited in the title ("Uptown Funk ft. Bruno Mars" by
+    Mark Ronson) count too, since yt-dlp often buries the feature there."""
     if is_match(guess, artist):
         return True
     parts = [p.strip() for p in _FEAT_SPLIT.split(artist) if p.strip()]
-    if len(parts) > 1:
-        return any(len(p) >= 3 and is_match(guess, p) for p in parts)
-    return False
+    candidates = parts if len(parts) > 1 else []
+    m = _TITLE_FEAT.search(title)
+    if m:
+        candidates = candidates + [p.strip() for p in _FEAT_SPLIT.split(m.group(1)) if p.strip()]
+    return any(len(p) >= 3 and is_match(guess, p) for p in candidates)
 
 
 def clean_title(title: str, artist: str) -> str:
@@ -805,7 +830,7 @@ def submit_guess():
     # Title and artist are scored independently, so one guess can land both
     # (e.g. "September Earth Wind and Fire").
     title_hit  = is_match(guess_lower, title)      and not game.get("title_guessed")
-    artist_hit = artist_match(guess_lower, artist) and not game.get("artist_guessed")
+    artist_hit = artist_match(guess_lower, artist, title) and not game.get("artist_guessed")
     title_points  = base_points if title_hit else 0
     artist_points = base_points // 2 if artist_hit else 0
 
@@ -1589,7 +1614,7 @@ def on_guess(data):
 
     # Title and artist score independently — one guess can land both.
     title_hit  = is_match(g, title)      and not got["title"]
-    artist_hit = artist_match(g, artist) and not got["artist"]
+    artist_hit = artist_match(g, artist, title) and not got["artist"]
 
     if title_hit:
         got["title"] = True
