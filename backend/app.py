@@ -1701,8 +1701,29 @@ def on_disconnect():
     broadcast_room(code)
 
 
+# ── Keep-warm self-ping (hosted only) ─────────────────────────────────────────
+# Render's free tier sleeps the instance after ~15 min without inbound traffic,
+# which makes the next visitor (or Googlebot fetching robots.txt) eat a ~50s cold
+# start. Pinging our own *public* URL goes through Render's proxy, counts as
+# traffic, and resets the idle timer. Render sets RENDER_EXTERNAL_URL itself, so
+# this never runs locally. A month of uptime fits the free-tier hour budget.
+SELF_PING_URL = os.environ.get("RENDER_EXTERNAL_URL", "").rstrip("/")
+
+def _self_ping_loop(interval=600):
+    import urllib.request
+    url = f"{SELF_PING_URL}/api/health"
+    while True:
+        time.sleep(interval)
+        try:
+            urllib.request.urlopen(url, timeout=30).read()
+        except Exception as e:
+            print(f"[keep-warm] ping failed: {e}", flush=True)
+
 if __name__ == "__main__":
     bootstrap_index()  # restore the canonical core_title -> video_id map (R2 or local)
+    if SELF_PING_URL:
+        threading.Thread(target=_self_ping_loop, daemon=True).start()
+        print(f"[keep-warm] self-ping enabled → {SELF_PING_URL}/api/health every 10 min", flush=True)
     port = int(os.environ.get("PORT", 5001))   # Render injects $PORT; 5001 locally
     debug = os.environ.get("RIFFDLE_DEBUG", "1") != "0"
     socketio.run(app, host="0.0.0.0", port=port, debug=debug,
