@@ -12,7 +12,7 @@ import threading
 from difflib import SequenceMatcher
 from pathlib import Path
 import string
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, send_from_directory, redirect
 from flask_cors import CORS
 from flask_socketio import SocketIO, join_room as sio_join, leave_room as sio_leave, emit
 from dotenv import load_dotenv
@@ -802,6 +802,22 @@ def serve_stem(session_id, stem_name):
     allowed = {"drums", "bass", "melody", "vocals"}
     if stem_name not in allowed:
         return jsonify({"error": "Invalid stem"}), 400
+
+    # Hand the browser a short-lived presigned R2 URL instead of streaming the MP3
+    # through this server: R2 egress is free, while every byte sent from Render
+    # counts against the hosting bandwidth cap (~11 MB per game). Needs a CORS
+    # rule on the bucket so Web Audio can read the cross-origin response.
+    vid = game.get("video_id")
+    if r2 and vid:
+        try:
+            url = r2.generate_presigned_url(
+                "get_object",
+                Params={"Bucket": R2_BUCKET, "Key": f"{vid}/{stem_name}.mp3"},
+                ExpiresIn=3600,
+            )
+            return redirect(url, code=302)
+        except ClientError:
+            pass   # fall through to serving the local copy
 
     file_path = Path(game["stem_files"][stem_name])
     if not file_path.exists():
