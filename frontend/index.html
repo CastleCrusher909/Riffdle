@@ -51,6 +51,7 @@
       <header class="masthead">
         <h1 class="logo">Riffdle</h1>
         <p class="intro">Guess the song from its drums, bass, melody and vocals.</p>
+        <p id="whats-new" class="whats-new hidden"><span class="new-tag">New</span> Hear the full song after each round, thanks to a player's suggestion.</p>
       </header>
 
       <main class="home">
@@ -75,6 +76,7 @@
             <div id="request-form" class="request-form hidden">
               <input id="request-input" type="text" placeholder="Song and artist" autocomplete="off" maxlength="120" />
               <button id="btn-request-submit">Request</button>
+              <input id="request-contact" class="contact-input" type="text" placeholder="Your name or email (optional, only used to reply)" autocomplete="off" maxlength="100" />
             </div>
             <p id="request-msg" class="request-msg hidden"></p>
           </div>
@@ -108,6 +110,7 @@
           <button id="btn-feedback-toggle" class="request-toggle">Send feedback</button>
           <div id="feedback-form" class="feedback-form hidden">
             <textarea id="feedback-input" rows="4" maxlength="1000" placeholder="Ideas, bugs, songs you love — anything"></textarea>
+            <input id="feedback-contact" class="contact-input" type="text" placeholder="Your name or email (optional, only used to reply)" autocomplete="off" maxlength="100" />
             <button id="btn-feedback-submit">Send</button>
           </div>
           <p id="feedback-msg" class="request-msg hidden"></p>
@@ -398,6 +401,14 @@
       <h2 id="result-heading" class="result-label"></h2>
       <p class="answer-title" id="result-title"></p>
       <p class="answer-artist" id="result-artist"></p>
+      <div id="result-listen" class="result-listen hidden">
+        <div class="listen-row">
+          <button id="btn-full-mix" class="btn-secondary">▶ Play full mix</button>
+          <button id="btn-youtube" class="btn-secondary">Full song on YouTube</button>
+        </div>
+        <div id="yt-embed" class="yt-embed hidden"></div>
+        <a id="yt-link" class="yt-link hidden" target="_blank" rel="noopener">Video won't play here? Open it on YouTube ↗</a>
+      </div>
       <p class="final-score"><strong id="result-score"></strong> points</p>
       <div id="result-grid" class="daily-grid hidden"></div>
       <p id="result-stats" class="result-stats hidden"></p>

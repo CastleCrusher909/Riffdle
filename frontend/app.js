@@ -52,6 +52,7 @@ let hintsLog = [];       // [{ text, cost }] of hints revealed this round
 function showScreen(id) {
   document.querySelectorAll(".screen").forEach((s) => s.classList.remove("active"));
   document.getElementById(id).classList.add("active");
+  if (id !== "screen-result" && typeof resetListen === "function") resetListen();
   if (id === "screen-landing" && typeof refreshStreakUI === "function") refreshStreakUI();
   else if (id !== "screen-landing" && landingCountdownId) clearInterval(landingCountdownId);
 }
@@ -484,7 +485,7 @@ function finishDaily(title, artist) {
   };
   try { localStorage.setItem(dailyKey(dailyNumber), JSON.stringify(obj)); } catch (_) {}
   recordStreak(dailyNumber);
-  enterDailyResult(obj);
+  enterDailyResult(obj, { canMix: true });
 }
 
 function emojiGrid(solved, stems, total) {
@@ -503,7 +504,7 @@ function dailyShareText(obj) {
   return `🎸 Riffdle Daily #${obj.number} — Score ${obj.score} (${res})\n${dailyGrid(obj)}\n${location.origin}`;
 }
 
-function enterDailyResult(obj) {
+function enterDailyResult(obj, opts = {}) {
   if (typeof masterStop === "function") masterStop();
   document.getElementById("result-heading").textContent = `Daily #${obj.number}`;
   document.getElementById("result-title").textContent = obj.title || "—";
@@ -521,6 +522,7 @@ function enterDailyResult(obj) {
   renderSongStats({ aggregateOnly: true, targetId: "daily-stats" });
   startDailyCountdown();
   showScreen("screen-result");
+  setupListen({ canMix: !!opts.canMix, videoId: currentVideoId });
 }
 
 function dailyShareTextNow() {
@@ -608,7 +610,7 @@ function startDailyCountdown() {
       const res = await fetch(`${API}/request`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query }),
+        body: JSON.stringify({ query, contact: document.getElementById("request-contact").value.trim() }),
       });
       if (!res.ok) throw new Error();
       input.value = "";
@@ -628,6 +630,13 @@ function startDailyCountdown() {
   submit.addEventListener("click", sendRequest);
   input.addEventListener("keydown", (e) => { if (e.key === "Enter") sendRequest(); });
 })();
+
+// ── What's new ────────────────────────────────────────────────
+// A one-line note on the home page; disappears by itself after WHATS_NEW_UNTIL.
+const WHATS_NEW_UNTIL = "2026-12-20";
+if (new Date().toISOString().slice(0, 10) <= WHATS_NEW_UNTIL) {
+  document.getElementById("whats-new")?.classList.remove("hidden");
+}
 
 // ── Feedback ──────────────────────────────────────────────────
 // Free-text messages to the owner, saved to feedback.json in R2.
@@ -654,7 +663,7 @@ function startDailyCountdown() {
       const res = await fetch(`${API}/feedback`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text, page: "home" }),
+        body: JSON.stringify({ text, page: "home", contact: document.getElementById("feedback-contact").value.trim() }),
       });
       if (res.status === 429) throw new Error("slow");
       if (!res.ok) throw new Error();
@@ -1220,8 +1229,89 @@ function showResult(title, artist) {
   grid.classList.remove("hidden");
   renderHintsSummary(hintsUsed, hintTotalCost, hintsLog.map((h) => h.text));
   showScreen("screen-result");
+  setupListen({ canMix: true, videoId: currentVideoId });
   renderSongStats();
 }
+
+// ── Result screen: hear the whole thing ───────────────────────
+// "Play full mix" plays all four stems together (the cached ~90s clip).
+// "Full song on YouTube" embeds the real video (youtube-nocookie, loaded only
+// on click so nothing from YouTube loads unless the player asks for it).
+let mixSources = [];
+let mixPlaying = false;
+
+function setMixLabel(text) { document.getElementById("btn-full-mix").textContent = text; }
+
+function stopFullMix() {
+  mixPlaying = false;
+  mixSources.forEach((src) => { try { src.stop(); } catch (_) {} });
+  mixSources = [];
+  setMixLabel("▶ Play full mix");
+}
+
+async function toggleFullMix() {
+  if (mixPlaying) { stopFullMix(); return; }
+  const btn = document.getElementById("btn-full-mix");
+  btn.disabled = true;
+  setMixLabel("Loading…");
+  try {
+    const ctx = ensureCtx();
+    if (ctx.state === "suspended") await ctx.resume();
+    const stems = activeStemOrder.length ? activeStemOrder : ALL_STEMS;
+    const bufs = (await Promise.all(stems.map((st) => loadStemBuffer(st).catch(() => null)))).filter(Boolean);
+    if (!bufs.length) throw new Error("no audio");
+    const when = ctx.currentTime + SCHEDULE_AHEAD;
+    mixSources = bufs.map((buf) => {
+      const src = ctx.createBufferSource();
+      src.buffer = buf;
+      src.connect(ctx.destination);
+      src.start(when);
+      return src;
+    });
+    mixSources[0].onended = () => { if (mixPlaying) stopFullMix(); };
+    mixPlaying = true;
+    setMixLabel("❚❚ Stop");
+  } catch (_) {
+    setMixLabel("▶ Play full mix");
+    btn.classList.add("hidden");   // audio is gone (e.g. session expired) — YouTube still works
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function showYouTube() {
+  const vid = document.getElementById("result-listen").dataset.vid;
+  if (!vid) return;
+  stopFullMix();
+  const box = document.getElementById("yt-embed");
+  box.innerHTML = `<iframe src="https://www.youtube-nocookie.com/embed/${encodeURIComponent(vid)}?autoplay=1&rel=0"
+    title="Full song on YouTube" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>`;
+  box.classList.remove("hidden");
+  document.getElementById("yt-link").classList.remove("hidden");
+  document.getElementById("btn-youtube").classList.add("hidden");
+}
+
+function resetListen() {
+  if (mixPlaying) stopFullMix();
+  const box = document.getElementById("yt-embed");
+  if (box) { box.innerHTML = ""; box.classList.add("hidden"); }
+  document.getElementById("yt-link")?.classList.add("hidden");
+  document.getElementById("btn-youtube")?.classList.remove("hidden");
+}
+
+function setupListen({ canMix, videoId }) {
+  resetListen();
+  const wrap = document.getElementById("result-listen");
+  const vid = /^[A-Za-z0-9_-]{11}$/.test(videoId || "") ? videoId : null;
+  wrap.dataset.vid = vid || "";
+  document.getElementById("btn-full-mix").classList.toggle("hidden", !(canMix && sessionId));
+  document.getElementById("btn-youtube").classList.toggle("hidden", !vid);
+  if (vid) document.getElementById("yt-link").href = `https://www.youtube.com/watch?v=${vid}`;
+  wrap.classList.toggle("hidden", !(canMix && sessionId) && !vid);
+}
+
+document.getElementById("btn-full-mix").addEventListener("click", toggleFullMix);
+document.getElementById("btn-youtube").addEventListener("click", showYouTube);
 
 // Fetch and show how quickly people solve this song (vs. how the player did).
 async function renderSongStats(opts = {}) {

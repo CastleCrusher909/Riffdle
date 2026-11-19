@@ -93,7 +93,8 @@ def show(requests, queue):
     for i, r in enumerate(requests, 1):
         cnt = r.get("count", 1)
         star = f"  ×{cnt}" if cnt > 1 else ""
-        print(f"  [{i:2}] {r.get('query', '?')}{star}   (last {r.get('last', '?')})")
+        who = f"   from: {', '.join(r['contacts'])}" if r.get("contacts") else ""
+        print(f"  [{i:2}] {r.get('query', '?')}{star}   (last {r.get('last', '?')}){who}")
 
     print("\n" + "-" * 60)
     print(f"CACHE QUEUE ({len(queue)})  — songs you've picked to add")

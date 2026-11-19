@@ -613,7 +613,7 @@ REQUESTS_KEY = "song_requests.json"   # user-submitted song requests (R2)
 _requests_lock = threading.Lock()
 
 
-def log_song_request(query: str):
+def log_song_request(query: str, contact: str = ""):
     """Append a user's song request to song_requests.json in R2 (deduped by a
     normalized key; re-requests bump a count so popular asks bubble up). Runs in a
     background thread so the request path never blocks on R2."""
@@ -636,8 +636,14 @@ def log_song_request(query: str):
                     entry["last"] = now
                     break
             else:
-                reqs.append({"key": key, "query": query, "count": 1,
-                             "first": now, "last": now})
+                entry = {"key": key, "query": query, "count": 1,
+                         "first": now, "last": now}
+                reqs.append(entry)
+            # Optional name/email the player left so the owner can reply
+            if contact:
+                contacts = entry.setdefault("contacts", [])
+                if contact not in contacts and len(contacts) < 20:
+                    contacts.append(contact)
             r2_put_json(REQUESTS_KEY, reqs)
 
     threading.Thread(target=_write, daemon=True).start()
@@ -984,11 +990,12 @@ def request_song():
     (manage_requests.py) and caches the good ones from their Mac."""
     data = request.get_json(silent=True) or {}
     query = (data.get("query") or "").strip()[:120]
+    contact = (data.get("contact") or "").strip()[:100]
     if not query:
         return jsonify({"ok": False, "error": "empty"}), 400
     if not r2:
         return jsonify({"ok": False, "error": "unavailable"}), 503
-    log_song_request(query)
+    log_song_request(query, contact)
     return jsonify({"ok": True})
 
 
@@ -1006,6 +1013,7 @@ def send_feedback():
     data = request.get_json(silent=True) or {}
     text = (data.get("text") or "").strip()[:FEEDBACK_MAX_LEN]
     page = (data.get("page") or "").strip()[:40]
+    contact = (data.get("contact") or "").strip()[:100]
     if not text:
         return jsonify({"ok": False, "error": "empty"}), 400
     if not r2:
@@ -1020,6 +1028,8 @@ def send_feedback():
     entry = {"text": text, "at": time.strftime("%Y-%m-%d %H:%M", time.gmtime())}
     if page:
         entry["page"] = page
+    if contact:
+        entry["contact"] = contact   # optional, only for replying
 
     def _write():
         with _feedback_lock:
