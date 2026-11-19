@@ -29,7 +29,7 @@ let revealLocked = false; // debounce guard — prevents double-firing the revea
 const TIP_URL = "https://ko-fi.com/jameswepsic";
 // Your GoatCounter code (the "riffdle" in riffdle.goatcounter.com) to turn on
 // privacy-friendly visit counting. Only runs on the hosted site, not localhost.
-const GOATCOUNTER_CODE = "";
+const GOATCOUNTER_CODE = "riffdle";
 
 (function setupSupportAndAnalytics() {
   if (TIP_URL) {
