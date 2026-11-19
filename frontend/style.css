@@ -1226,58 +1226,6 @@ body.mp #btn-mp-skip { display: inline-block; }
 #btn-play-again:hover:not(:disabled),
 #btn-mp-play-again:hover:not(:disabled) { background: var(--red); border-color: var(--red); }
 .share-row { display: flex; gap: 0.7rem; }
-
-/* Tip jar link — quiet, under the result actions + in the footer */
-.tip-link {
-  display: block;
-  margin-top: 1.4rem;
-  text-align: center;
-  font-family: var(--mono);
-  font-size: 0.75rem;
-  color: var(--ink-soft);
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-.tip-link:hover { color: var(--red); }
-
-/* Floating Ko-fi button — pinned bottom-right of the landing screen */
-.tip-link.tip-fab {
-  position: fixed;
-  right: 1.4rem;
-  bottom: 1.4rem;
-  z-index: 50;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin: 0;
-  padding: 0.7rem 1.05rem;
-  background: var(--red);
-  color: var(--paper);
-  border: 2px solid var(--ink);
-  box-shadow: 4px 4px 0 var(--ink);
-  font-family: var(--mono);
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  text-decoration: none;
-  transform: rotate(-2deg);
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
-}
-.tip-link.tip-fab:hover {
-  color: var(--paper);
-  transform: rotate(0deg) translate(-2px, -2px);
-  box-shadow: 6px 6px 0 var(--ink);
-}
-.tip-link.tip-fab:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--ink); }
-.tip-fab-ico { width: 20px; height: 20px; flex: none; }
-.tip-fab-heart { font-size: 0.9rem; animation: tipBeat 1.6s ease-in-out infinite; }
-@keyframes tipBeat {
-  0%, 60%, 100% { transform: scale(1); }
-  30% { transform: scale(1.3); }
-}
-@media (prefers-reduced-motion: reduce) { .tip-fab-heart { animation: none; } }
-.tip-link.hidden { display: none; }
 .share-row button { flex: 1; }
 
 .leaderboard { margin-bottom: 1.2rem; }
@@ -1394,9 +1342,6 @@ body.mp #btn-mp-skip { display: inline-block; }
   .url-form, .request-form { flex-direction: column; align-items: stretch; }
   .url-form input, .request-form input { width: 100%; }
   .colophon-mid { display: none; }
-  .tip-link.tip-fab { right: 0.9rem; bottom: 0.9rem; padding: 0.6rem 0.8rem; }
-  .tip-fab-long { display: none; }
-  .colophon { padding-bottom: 5rem; }  /* keep the footer clear of the floating tip button */
 
   #screen-game { padding: 1rem 1rem 2.5rem; }
   .stems-panel { gap: 0.5rem; }
