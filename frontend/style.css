@@ -191,6 +191,8 @@ input:focus { outline: none; border-color: var(--text); }
 .request-msg.error { color: var(--bad); }
 
 .feedback-section { margin-top: 1.5rem; }
+.feedback-email { font-size: 0.8rem; color: var(--faint); margin-top: 0.3rem; }
+.feedback-email a, .site-about-body a { color: var(--muted); }
 .feedback-form { display: flex; flex-direction: column; align-items: flex-start; gap: 0.5rem; margin-top: 0.5rem; }
 .feedback-form textarea {
   font: inherit;
