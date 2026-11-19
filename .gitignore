@@ -20,3 +20,6 @@ precache.log
 
 # Local owner-only docs (not for the public repo)
 MANAGING_SONGS.md
+
+# Promo drafts (videos, post text)
+promo/
