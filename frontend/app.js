@@ -629,6 +629,52 @@ function startDailyCountdown() {
   input.addEventListener("keydown", (e) => { if (e.key === "Enter") sendRequest(); });
 })();
 
+// ── Feedback ──────────────────────────────────────────────────
+// Free-text messages to the owner, saved to feedback.json in R2.
+(() => {
+  const toggle = document.getElementById("btn-feedback-toggle");
+  const form = document.getElementById("feedback-form");
+  const input = document.getElementById("feedback-input");
+  const submit = document.getElementById("btn-feedback-submit");
+  const msg = document.getElementById("feedback-msg");
+  if (!toggle) return;
+
+  toggle.addEventListener("click", () => {
+    form.classList.toggle("hidden");
+    msg.classList.add("hidden");
+    if (!form.classList.contains("hidden")) input.focus();
+  });
+
+  submit.addEventListener("click", async () => {
+    const text = input.value.trim();
+    if (!text) { input.focus(); return; }
+    submit.disabled = true;
+    submit.textContent = "Sending…";
+    try {
+      const res = await fetch(`${API}/feedback`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text, page: "home" }),
+      });
+      if (res.status === 429) throw new Error("slow");
+      if (!res.ok) throw new Error();
+      input.value = "";
+      form.classList.add("hidden");
+      msg.textContent = "Thanks! Your feedback was sent.";
+      msg.classList.remove("hidden", "error");
+    } catch (e) {
+      msg.textContent = e.message === "slow"
+        ? "You just sent one. Wait a few seconds and try again."
+        : "Couldn't send that. Try again later.";
+      msg.classList.remove("hidden");
+      msg.classList.add("error");
+    } finally {
+      submit.disabled = false;
+      submit.textContent = "Send";
+    }
+  });
+})();
+
 // ── Master player (Web Audio API — sample-accurate, drift-free) ──────────────
 //
 // Every revealed stem is decoded into an AudioBuffer and played through a single

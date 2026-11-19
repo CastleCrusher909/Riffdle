@@ -992,6 +992,47 @@ def request_song():
     return jsonify({"ok": True})
 
 
+FEEDBACK_KEY = "feedback.json"     # player feedback messages (R2)
+FEEDBACK_MAX_LEN = 1000
+FEEDBACK_KEEP = 500                # cap stored messages so the file can't grow forever
+_feedback_lock = threading.Lock()
+_feedback_last: dict[str, float] = {}   # ip -> last submit time (simple spam guard)
+
+
+@app.route("/api/feedback", methods=["POST"])
+def send_feedback():
+    """Save a player's feedback message to feedback.json in R2. The owner's
+    weekly check-up reads and summarizes these."""
+    data = request.get_json(silent=True) or {}
+    text = (data.get("text") or "").strip()[:FEEDBACK_MAX_LEN]
+    page = (data.get("page") or "").strip()[:40]
+    if not text:
+        return jsonify({"ok": False, "error": "empty"}), 400
+    if not r2:
+        return jsonify({"ok": False, "error": "unavailable"}), 503
+
+    ip = (request.headers.get("X-Forwarded-For") or request.remote_addr or "").split(",")[0].strip()
+    now = time.time()
+    if now - _feedback_last.get(ip, 0) < 20:
+        return jsonify({"ok": False, "error": "slow_down"}), 429
+    _feedback_last[ip] = now
+
+    entry = {"text": text, "at": time.strftime("%Y-%m-%d %H:%M", time.gmtime())}
+    if page:
+        entry["page"] = page
+
+    def _write():
+        with _feedback_lock:
+            items = r2_get_json(FEEDBACK_KEY, [])
+            if not isinstance(items, list):
+                items = []
+            items.append(entry)
+            r2_put_json(FEEDBACK_KEY, items[-FEEDBACK_KEEP:])
+
+    threading.Thread(target=_write, daemon=True).start()
+    return jsonify({"ok": True})
+
+
 @app.route("/api/random")
 def random_song():
     decades = [d.strip() for d in request.args.get("decades", "").split(",") if d.strip()]

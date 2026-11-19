@@ -186,6 +186,21 @@ input:focus { outline: none; border-color: var(--text); }
 .request-msg { font-size: 0.9rem; color: var(--good); margin-top: 0.5rem; }
 .request-msg.error { color: var(--bad); }
 
+.feedback-section { margin-top: 1.5rem; }
+.feedback-form { display: flex; flex-direction: column; align-items: flex-start; gap: 0.5rem; margin-top: 0.5rem; }
+.feedback-form textarea {
+  font: inherit;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 0.65rem 0.8rem;
+  width: 100%;
+  resize: vertical;
+}
+.feedback-form textarea::placeholder { color: var(--faint); }
+.feedback-form textarea:focus { outline: none; border-color: var(--text); }
+
 #btn-random { margin-top: 0.4rem; }
 
 .site-about { margin-top: 3rem; font-size: 0.9rem; color: var(--muted); }
