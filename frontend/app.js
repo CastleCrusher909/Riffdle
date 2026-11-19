@@ -24,6 +24,31 @@ let resultArtist = null;
 let pollToken = 0;       // incremented to cancel stale poll loops
 let revealLocked = false; // debounce guard — prevents double-firing the reveal button
 
+// ── Support + analytics config ────────────────────────────────
+// Paste your Ko-fi / Buy Me a Coffee page here to show the tip links.
+const TIP_URL = "https://ko-fi.com/jameswepsic";
+// Your GoatCounter code (the "riffdle" in riffdle.goatcounter.com) to turn on
+// privacy-friendly visit counting. Only runs on the hosted site, not localhost.
+const GOATCOUNTER_CODE = "";
+
+(function setupSupportAndAnalytics() {
+  if (TIP_URL) {
+    document.querySelectorAll(".tip-link").forEach((a) => {
+      a.href = TIP_URL;
+      a.classList.remove("hidden");
+    });
+  }
+  const isLocal = ["localhost", "127.0.0.1"].includes(location.hostname) ||
+                  /^(10|172|192)\./.test(location.hostname);
+  if (GOATCOUNTER_CODE && !isLocal) {
+    const sc = document.createElement("script");
+    sc.async = true;
+    sc.src = "https://gc.zgo.at/count.js";
+    sc.dataset.goatcounter = `https://${GOATCOUNTER_CODE}.goatcounter.com/count`;
+    document.head.appendChild(sc);
+  }
+})();
+
 // ── Hints ─────────────────────────────────────────────────────
 // Up to 3 per round; 1st free, 2nd −75 pts, 3rd −150 pts.
 const HINT_COSTS = [0, 75, 150];   // cost of the 1st, 2nd, 3rd hint

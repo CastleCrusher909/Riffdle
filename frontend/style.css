@@ -1226,6 +1226,21 @@ body.mp #btn-mp-skip { display: inline-block; }
 #btn-play-again:hover:not(:disabled),
 #btn-mp-play-again:hover:not(:disabled) { background: var(--red); border-color: var(--red); }
 .share-row { display: flex; gap: 0.7rem; }
+
+/* Tip jar link — quiet, under the result actions + in the footer */
+.tip-link {
+  display: block;
+  margin-top: 1.4rem;
+  text-align: center;
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  color: var(--ink-soft);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.tip-link:hover { color: var(--red); }
+.tip-link.tip-link-small { display: inline; margin: 0; font-size: inherit; color: inherit; }
+.tip-link.hidden { display: none; }
 .share-row button { flex: 1; }
 
 .leaderboard { margin-bottom: 1.2rem; }
