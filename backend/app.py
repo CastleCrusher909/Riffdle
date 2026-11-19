@@ -412,6 +412,9 @@ def get_video_meta(url: str) -> dict | None:
         return {"id": vid, "title": title, "artist": artist}
 
 
+META_REFRESH_SECS = 600   # how stale a local meta.json may get before re-checking R2
+
+
 def load_cache(video_id: str) -> dict | None:
     """Return cached stem paths + metadata. Falls back to R2 if not found locally."""
     cache_path = CACHE_DIR / video_id
@@ -421,6 +424,14 @@ def load_cache(video_id: str) -> dict | None:
     if not meta_file.exists():
         if not r2_download(f"{video_id}/meta.json", meta_file):
             return None
+    elif time.time() - meta_file.stat().st_mtime > META_REFRESH_SECS:
+        # Re-pull meta so title/artist fixes made in R2 reach a long-running
+        # server. Download beside it, then swap — a failed fetch keeps the old copy.
+        tmp = meta_file.with_suffix(".json.new")
+        if r2_download(f"{video_id}/meta.json", tmp):
+            tmp.replace(meta_file)
+        else:
+            meta_file.touch()   # R2 unreachable — don't retry on every play
 
     meta = json.loads(meta_file.read_text())
     stem_names = meta.get("stems", ["drums", "bass", "melody", "vocals"])
