@@ -6,7 +6,7 @@
   <title>Riffdle — Guess the Song from Its Stems</title>
   <meta name="description" content="Riffdle is a daily-style music guessing game: a song is split into drums, bass, melody, and vocals, and you guess it as the stems reveal one at a time. Play solo or in real-time multiplayer with friends." />
   <link rel="canonical" href="https://riffdle.onrender.com/" />
-  <meta name="theme-color" content="#F5F0E6" />
+  <meta name="theme-color" content="#ffffff" />
 
   <!-- Open Graph (link previews on iMessage, Discord, Facebook, etc.) -->
   <meta property="og:type" content="website" />
@@ -28,10 +28,7 @@
   <link rel="icon" href="/favicon.svg?v=2" type="image/svg+xml" />
   <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96.png?v=2" />
   <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=2" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400..900;1,9..144,400..900&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="style.css" />
 
   <!-- Structured data: helps Google/AI understand the page -->
   <script type="application/ld+json">
@@ -50,247 +47,163 @@
 <body>
   <!-- ── Landing ───────────────────────────────────────────────── -->
   <div id="screen-landing" class="screen active">
-    <div class="sleeve">
+    <div class="page">
       <header class="masthead">
-        <div class="mast-meta" aria-hidden="true">
-          <span>RFD–001</span>
-          <span class="mast-meta-mid">4 stems · 1 song</span>
-          <span>33⅓ RPM · Stereo</span>
-        </div>
         <h1 class="logo">Riffdle</h1>
-        <p class="tagline">We take a song apart. You name it from the pieces.</p>
-        <div class="stem-stripe" aria-hidden="true">
-          <span class="band band-drums"><i></i>Drums</span>
-          <span class="band band-bass"><i></i>Bass</span>
-          <span class="band band-melody"><i></i>Melody</span>
-          <span class="band band-vocals"><i></i>Vocals</span>
-        </div>
+        <p class="intro">Guess the song from its drums, bass, melody and vocals.</p>
       </header>
 
-      <div id="streak-badge" class="streak-badge hidden">
-        <svg class="streak-flame" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2c.4 2.6 2.2 4 3.4 5.5C16.6 9 17.5 10.6 17.5 13a5.5 5.5 0 0 1-11 0c0-1.6.6-2.9 1.5-3.9.2 1.3 1 2 1.9 2 .5 0 .9-.4.9-1.1 0-1.6-1.4-2.6-.8-4.6C10.1 4.1 11 3 12 2Z"/></svg>
-        <span id="streak-count">0</span>
-        <span class="streak-label">day streak</span>
-      </div>
+      <main class="home">
+        <section class="daily-wrap">
+          <button id="btn-daily" class="btn-daily">
+            <span class="btn-daily-title">Today's song</span>
+            <span class="btn-daily-sub"></span>
+          </button>
+          <p id="streak-badge" class="streak hidden"><span id="streak-count">0</span>-day streak</p>
+        </section>
 
-      <main class="tracklist">
-        <div class="side-head"><span class="side-name">Side A</span><span class="side-sub">solo</span></div>
-
-        <button id="btn-daily" class="track-row track-daily">
-          <span class="track-no">A1</span>
-          <span class="btn-daily-text track-text">
-            <span class="btn-daily-title track-title">Daily Challenge</span>
-            <span class="btn-daily-sub track-sub">One song · everyone · today</span>
-          </span>
-          <svg class="track-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-        </button>
-
-        <div class="track-block">
-          <div class="track-head"><span class="track-no">A2</span><span class="track-title">Play any song</span></div>
+        <section class="block">
+          <h2>Search</h2>
           <div class="url-form">
-            <input
-              id="yt-url"
-              type="text"
-              placeholder="Type a song, or paste a YouTube link"
-              autocomplete="off"
-            />
+            <input id="yt-url" type="text" placeholder="Search for a song" autocomplete="off" />
             <button id="btn-start">Search</button>
           </div>
           <p id="landing-error" class="error-msg hidden"></p>
           <div id="search-results" class="search-results hidden"></div>
-
           <div class="request-section">
-            <button id="btn-request-toggle" class="request-toggle">Don't see your song? Request a pressing</button>
+            <button id="btn-request-toggle" class="request-toggle">Can't find it? Request a song</button>
             <div id="request-form" class="request-form hidden">
-              <input
-                id="request-input"
-                type="text"
-                placeholder="Song name &amp; artist…"
-                autocomplete="off"
-                maxlength="120"
-              />
+              <input id="request-input" type="text" placeholder="Song and artist" autocomplete="off" maxlength="120" />
               <button id="btn-request-submit">Request</button>
             </div>
             <p id="request-msg" class="request-msg hidden"></p>
           </div>
-        </div>
+        </section>
 
-        <div class="track-block">
-          <div class="track-head"><span class="track-no">A3</span><span class="track-title">Drop the needle</span><span class="track-head-note">a random pick from the crate</span></div>
-          <div class="filter-group">
-            <span class="filter-label">Decade</span>
-            <div class="chips" id="chips-decade">
-              <button class="chip" data-value="70s">70s</button>
-              <button class="chip" data-value="80s">80s</button>
-              <button class="chip" data-value="90s">90s</button>
-              <button class="chip" data-value="00s">00s</button>
-              <button class="chip" data-value="10s">10s</button>
-              <button class="chip" data-value="20s">20s</button>
-            </div>
+        <section class="block">
+          <h2>Random song</h2>
+          <div class="chips" id="chips-decade">
+            <button class="chip" data-value="70s">70s</button>
+            <button class="chip" data-value="80s">80s</button>
+            <button class="chip" data-value="90s">90s</button>
+            <button class="chip" data-value="00s">00s</button>
+            <button class="chip" data-value="10s">10s</button>
+            <button class="chip" data-value="20s">20s</button>
           </div>
-          <div class="filter-group">
-            <span class="filter-label">Genre</span>
-            <div class="chips" id="chips-genre">
-              <button class="chip" data-value="pop">Pop</button>
-              <button class="chip" data-value="rock">Rock</button>
-              <button class="chip" data-value="hiphop">Hip-Hop</button>
-              <button class="chip" data-value="randb">R&amp;B</button>
-              <button class="chip" data-value="electronic">Electronic</button>
-            </div>
+          <div class="chips" id="chips-genre">
+            <button class="chip" data-value="pop">Pop</button>
+            <button class="chip" data-value="rock">Rock</button>
+            <button class="chip" data-value="hiphop">Hip-hop</button>
+            <button class="chip" data-value="randb">R&amp;B</button>
+            <button class="chip" data-value="electronic">Electronic</button>
           </div>
-          <button id="btn-random" class="btn-needle">
-            <svg class="btn-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h3l11 12h3M4 18h3l3-3M21 6l-2-2m2 2-2 2M21 18l-2-2m2 2-2 2M14 8l1-2"/></svg>
-            Drop the needle
-          </button>
-        </div>
+          <button id="btn-random" class="btn-secondary btn-wide">Play a random song</button>
+        </section>
 
-        <div class="side-head"><span class="side-name">Side B</span><span class="side-sub">together</span></div>
-
-        <button id="btn-mp" class="track-row">
-          <span class="track-no">B1</span>
-          <span class="track-text">
-            <span class="track-title">Play with friends</span>
-            <span class="track-sub">Live rooms · same stems · fastest ear wins</span>
-          </span>
-          <svg class="track-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-        </button>
+        <section class="block">
+          <button id="btn-mp" class="btn-secondary btn-wide">Play with friends</button>
+        </section>
       </main>
 
       <details class="site-about">
-        <summary>Liner notes — about Riffdle</summary>
+        <summary>How to play</summary>
         <div class="site-about-body">
           <p>Riffdle is a free music guessing game. Each round, a song is split into four
-          stems — drums, bass, melody, and vocals — and you guess the track as the stems
-          reveal one at a time. Play a quick solo round or start a real-time multiplayer
-          game with friends.</p>
+          stems (drums, bass, melody and vocals) and you guess the track as the stems
+          come in one at a time. Play solo or start a live game with friends.</p>
           <h3>How do you play Riffdle?</h3>
-          <p>Listen to the first stem and type your guess. With each guess, Riffdle layers
-          in another stem so the song gets easier to recognize. Name the title — and the
-          artist for bonus points — before the clip ends.</p>
+          <p>Listen to the first stem and type your guess. Each wrong guess or skip adds
+          another stem, so the song gets easier to recognize. Name the title, and the
+          artist for bonus points.</p>
           <h3>Is Riffdle free?</h3>
-          <p>Yes. Riffdle runs right in your browser with no sign-up, solo or with friends.</p>
+          <p>Yes. It runs in your browser with no sign-up.</p>
         </div>
       </details>
-
-      <footer class="colophon">
-        <span>Produced &amp; engineered in your browser</span>
-        <span class="colophon-mid">All stems separated with care</span>
-        <span>© 2026</span>
-      </footer>
     </div>
   </div>
 
   <!-- ── Multiplayer setup ─────────────────────────────────────── -->
   <div id="screen-mp-setup" class="screen">
-    <div class="hero">
-      <header class="brand">
-        <span class="brand-mark" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M16 19v-1a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v1"/><circle cx="9" cy="7" r="3.2"/><path d="M22 19v-1a4 4 0 0 0-3-3.87M16 3.5a4 4 0 0 1 0 7"/></svg>
-        </span>
-        <h1 class="logo">Multiplayer</h1>
-        <p class="tagline">Create a room or join one with a code.</p>
-      </header>
+    <div class="page">
+      <button id="btn-mp-back" class="btn-text">← Back</button>
+      <h1 class="page-title">Play with friends</h1>
 
-      <div class="mp-setup-field">
+      <div class="field">
         <label for="mp-name">Your name</label>
-        <input id="mp-name" type="text" maxlength="20" placeholder="e.g. Alex" autocomplete="off" />
+        <input id="mp-name" type="text" maxlength="20" autocomplete="off" />
       </div>
 
-      <div class="mp-setup-cols">
-        <!-- Create -->
-        <div class="mp-setup-card">
-          <h3>Create a room</h3>
-          <div class="mp-field mp-field-row">
-            <div>
-              <span class="filter-label">Clip (sec)</span>
-              <input id="mp-timer-input" type="number" min="3" max="90" value="15" class="mp-len-input" />
-            </div>
-            <div>
-              <span class="filter-label">Rounds</span>
-              <input id="mp-rounds-input" type="number" min="1" max="20" value="3" class="mp-len-input" />
-            </div>
-          </div>
-          <p class="mp-len-hint">Clip loops from the song's middle, +1 stem each loop. Play a match of several rounds.</p>
-          <div class="mp-field">
-            <span class="filter-label">Decade <span class="filter-multi">— pick any number</span></span>
-            <div class="chips" id="mp-chips-decade">
-              <button class="chip" data-value="70s">70s</button>
-              <button class="chip" data-value="80s">80s</button>
-              <button class="chip" data-value="90s">90s</button>
-              <button class="chip" data-value="00s">00s</button>
-              <button class="chip" data-value="10s">10s</button>
-              <button class="chip" data-value="20s">20s</button>
-            </div>
-          </div>
-          <div class="mp-field">
-            <span class="filter-label">Genre <span class="filter-multi">— pick any number</span></span>
-            <div class="chips" id="mp-chips-genre">
-              <button class="chip" data-value="pop">Pop</button>
-              <button class="chip" data-value="rock">Rock</button>
-              <button class="chip" data-value="hiphop">Hip-Hop</button>
-              <button class="chip" data-value="randb">R&amp;B</button>
-              <button class="chip" data-value="electronic">Electronic</button>
-            </div>
-          </div>
-          <p class="filter-hint">Leave filters empty for songs from everything.</p>
-          <button id="btn-create-room">Create room</button>
+      <section class="block">
+        <h2>Join a room</h2>
+        <div class="url-form">
+          <input id="mp-code" type="text" maxlength="4" placeholder="Room code" class="mp-code-input" autocomplete="off" />
+          <button id="btn-join-room">Join</button>
         </div>
+      </section>
 
-        <!-- Join -->
-        <div class="mp-setup-card">
-          <h3>Join a room</h3>
-          <div class="mp-field">
-            <span class="filter-label">Room code</span>
-            <input id="mp-code" type="text" maxlength="4" placeholder="ABCD"
-                   class="mp-code-input" autocomplete="off" />
+      <section class="block">
+        <h2>Create a room</h2>
+        <div class="field-row">
+          <div class="field">
+            <label for="mp-timer-input">Seconds per stem</label>
+            <input id="mp-timer-input" type="number" min="3" max="90" value="15" class="mp-len-input" />
           </div>
-          <button id="btn-join-room">Join room</button>
+          <div class="field">
+            <label for="mp-rounds-input">Rounds</label>
+            <input id="mp-rounds-input" type="number" min="1" max="20" value="3" class="mp-len-input" />
+          </div>
         </div>
-      </div>
+          <div class="chips" id="mp-chips-decade">
+            <button class="chip" data-value="70s">70s</button>
+            <button class="chip" data-value="80s">80s</button>
+            <button class="chip" data-value="90s">90s</button>
+            <button class="chip" data-value="00s">00s</button>
+            <button class="chip" data-value="10s">10s</button>
+            <button class="chip" data-value="20s">20s</button>
+          </div>
+          <div class="chips" id="mp-chips-genre">
+            <button class="chip" data-value="pop">Pop</button>
+            <button class="chip" data-value="rock">Rock</button>
+            <button class="chip" data-value="hiphop">Hip-hop</button>
+            <button class="chip" data-value="randb">R&amp;B</button>
+            <button class="chip" data-value="electronic">Electronic</button>
+          </div>
+        <button id="btn-create-room" class="btn-wide">Create room</button>
+      </section>
 
       <p id="mp-setup-error" class="error-msg hidden"></p>
-      <button id="btn-mp-back" class="btn-text">← Back</button>
     </div>
   </div>
 
   <!-- ── Multiplayer lobby ─────────────────────────────────────── -->
   <div id="screen-mp-lobby" class="screen">
-    <div class="lobby-box">
-      <h2>Lobby</h2>
+    <div class="page">
+      <button id="btn-leave-lobby" class="btn-text">← Leave room</button>
       <div class="lobby-code-row">
         <div class="lobby-code">
           <span class="lobby-code-label">Room code</span>
-          <span id="lobby-code" class="lobby-code-value">————</span>
+          <span id="lobby-code" class="lobby-code-value">····</span>
         </div>
-        <button id="btn-copy-link" class="btn-secondary btn-icon">
-          <svg class="btn-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 15l6-6M10.5 6.5l1-1a4 4 0 0 1 6 6l-1 1M13.5 17.5l-1 1a4 4 0 0 1-6-6l1-1"/></svg>
-          Copy invite link
-        </button>
+        <button id="btn-copy-link" class="btn-secondary">Copy invite link</button>
       </div>
 
-      <div class="lobby-players">
-        <span class="filter-label">Players</span>
-        <ul id="lobby-player-list"></ul>
-      </div>
+      <section class="block">
+        <h2>Players</h2>
+        <ul id="lobby-player-list" class="lobby-players"></ul>
+      </section>
 
-      <!-- Host-only editable settings -->
-      <div class="lobby-settings" id="lobby-settings">
-        <p class="lobby-settings-note host">You're the host — pick the vibe for everyone.</p>
-        <div class="mp-field">
-          <div class="mp-field-row">
-            <div>
-              <span class="filter-label">Clip (sec)</span>
-              <input id="lobby-timer-input" type="number" min="3" max="90" value="15" class="mp-len-input" />
-            </div>
-            <div>
-              <span class="filter-label">Rounds</span>
-              <input id="lobby-rounds-input" type="number" min="1" max="20" value="3" class="mp-len-input" />
-            </div>
+      <section class="block lobby-settings" id="lobby-settings">
+        <h2>Settings</h2>
+        <div class="field-row">
+          <div class="field">
+            <label for="lobby-timer-input">Seconds per stem</label>
+            <input id="lobby-timer-input" type="number" min="3" max="90" value="15" class="mp-len-input" />
           </div>
-          <p class="mp-len-hint">Clip loops from the song's middle, +1 stem each loop.</p>
+          <div class="field">
+            <label for="lobby-rounds-input">Rounds</label>
+            <input id="lobby-rounds-input" type="number" min="1" max="20" value="3" class="mp-len-input" />
+          </div>
         </div>
-        <div class="mp-field">
-          <span class="filter-label">Decade <span class="filter-multi">— pick any number</span></span>
           <div class="chips" id="lobby-chips-decade">
             <button class="chip" data-value="70s">70s</button>
             <button class="chip" data-value="80s">80s</button>
@@ -299,54 +212,44 @@
             <button class="chip" data-value="10s">10s</button>
             <button class="chip" data-value="20s">20s</button>
           </div>
-        </div>
-        <div class="mp-field">
-          <span class="filter-label">Genre <span class="filter-multi">— pick any number</span></span>
           <div class="chips" id="lobby-chips-genre">
             <button class="chip" data-value="pop">Pop</button>
             <button class="chip" data-value="rock">Rock</button>
-            <button class="chip" data-value="hiphop">Hip-Hop</button>
+            <button class="chip" data-value="hiphop">Hip-hop</button>
             <button class="chip" data-value="randb">R&amp;B</button>
             <button class="chip" data-value="electronic">Electronic</button>
           </div>
-        </div>
-        <p class="filter-hint">Leave filters empty for songs from everything.</p>
-      </div>
+      </section>
 
-      <!-- Read-only view for non-host players -->
-      <div class="lobby-settings-readonly hidden" id="lobby-settings-readonly">
-        <span class="filter-label">Game settings</span>
+      <section class="block lobby-settings-readonly hidden" id="lobby-settings-readonly">
+        <h2>Settings</h2>
         <ul class="lobby-summary">
-          <li>Clip length <strong id="ro-timer">—</strong></li>
-          <li>Rounds <strong id="ro-rounds">—</strong></li>
-          <li>Decades <strong id="ro-decades">—</strong></li>
-          <li>Genres <strong id="ro-genres">—</strong></li>
+          <li>Seconds per stem <strong id="ro-timer">–</strong></li>
+          <li>Rounds <strong id="ro-rounds">–</strong></li>
+          <li>Decades <strong id="ro-decades">–</strong></li>
+          <li>Genres <strong id="ro-genres">–</strong></li>
         </ul>
-        <p class="lobby-settings-note">Only the host can change these.</p>
-      </div>
+      </section>
 
       <p id="lobby-error" class="error-msg hidden"></p>
-      <button id="btn-start-game" class="hidden">Start game</button>
+      <button id="btn-start-game" class="btn-wide hidden">Start game</button>
       <p id="lobby-wait-msg" class="lobby-wait hidden">Waiting for the host to start…</p>
-      <button id="btn-leave-lobby" class="btn-text">← Leave room</button>
     </div>
   </div>
 
   <!-- ── Multiplayer result ────────────────────────────────────── -->
   <div id="screen-mp-result" class="screen">
-    <div class="result-box">
-      <h2 id="mp-result-heading">Round Over</h2>
+    <div class="page">
+      <h2 id="mp-result-heading" class="result-label">Round over</h2>
       <p id="mp-result-round" class="mp-result-round"></p>
-      <div class="answer-card">
-        <p class="answer-title" id="mp-result-title"></p>
-        <p class="answer-artist" id="mp-result-artist"></p>
-      </div>
+      <p class="answer-title" id="mp-result-title"></p>
+      <p class="answer-artist" id="mp-result-artist"></p>
       <div class="leaderboard">
-        <span class="filter-label" id="mp-lb-label">Standings</span>
+        <h2 id="mp-lb-label">Standings</h2>
         <ol id="mp-leaderboard"></ol>
       </div>
-      <p id="mp-intermission" class="lobby-wait hidden">Next round in <strong>—</strong></p>
-      <button id="btn-mp-play-again" class="hidden">Play again</button>
+      <p id="mp-intermission" class="lobby-wait hidden">Next round in <strong>–</strong></p>
+      <button id="btn-mp-play-again" class="btn-wide hidden">Play again</button>
       <p id="mp-result-wait" class="lobby-wait hidden">Waiting for the host…</p>
       <button id="btn-mp-leave-result" class="btn-text">← Leave room</button>
     </div>
@@ -356,48 +259,39 @@
   <div id="screen-loading" class="screen">
     <div class="loading-box">
       <div class="spinner"></div>
-      <p id="loading-label">Starting up…</p>
+      <p id="loading-label">Loading…</p>
     </div>
   </div>
 
   <!-- ── Game ─────────────────────────────────────────────────── -->
   <div id="screen-game" class="screen">
     <header class="game-header">
-      <span class="logo-sm" id="logo-home" title="Back to menu">
-        <svg class="logo-sm-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
-        <span class="logo-text">Riffdle</span>
-      </span>
-      <button id="btn-share" class="btn-share btn-icon" title="Copy a link to challenge a friend with this song">
-        <svg class="btn-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><path d="M16 6l-4-4-4 4M12 2v13"/></svg>
-        Share
-      </button>
+      <span class="logo-sm" id="logo-home" title="Back to menu">Riffdle</span>
       <span id="score-display">Score: 0</span>
     </header>
-    <p id="game-stats" class="game-stats hidden"></p>
     <p id="challenge-note" class="challenge-note hidden"></p>
 
     <!-- Multiplayer-only HUD (hidden unless body.mp) -->
     <div id="mp-hud" class="mp-hud">
-      <button id="btn-mp-abort" class="btn-mp-abort hidden">✕ End game</button>
+      <button id="btn-mp-abort" class="btn-text btn-mp-abort hidden">End game</button>
       <div id="mp-round-badge" class="mp-round-badge"></div>
-      <div id="mp-timer" class="mp-timer">Next stem in <strong>—</strong></div>
+      <div id="mp-timer" class="mp-timer">Next stem in <strong>–</strong></div>
       <div id="mp-skip-status" class="mp-skip-status hidden"></div>
       <div class="mp-hud-cols">
         <div class="mp-scoreboard">
-          <span class="filter-label">Scores</span>
+          <h2>Scores</h2>
           <ol id="mp-scores"></ol>
         </div>
         <div class="mp-feed-wrap">
-          <span class="filter-label">Activity</span>
+          <h2>Activity</h2>
           <div id="mp-feed" class="mp-feed"></div>
         </div>
       </div>
     </div>
 
-    <!-- Stems panel — four channel strips on the tape machine -->
+    <!-- Stems -->
     <div class="stems-panel">
       <div class="stem-card" id="stem-drums">
-        <span class="stem-ch" aria-hidden="true">CH1</span>
         <div class="stem-icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="9" rx="9" ry="3.2"/><path d="M3 9v5c0 1.8 4 3.2 9 3.2s9-1.4 9-3.2V9"/><path d="M6 16l-2 5M18 16l2 5"/></svg>
         </div>
@@ -411,7 +305,6 @@
         </div>
       </div>
       <div class="stem-card" id="stem-bass">
-        <span class="stem-ch" aria-hidden="true">CH2</span>
         <div class="stem-icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="16" r="4.2"/><path d="M11 13 18.5 5.5"/><path d="M16.5 3.5l4 4-2.2 2.2-4-4z"/><path d="M8 16l2-2"/></svg>
         </div>
@@ -425,7 +318,6 @@
         </div>
       </div>
       <div class="stem-card" id="stem-melody">
-        <span class="stem-ch" aria-hidden="true">CH3</span>
         <div class="stem-icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 14h18M7.5 5v9M12 5v9M16.5 5v9"/></svg>
         </div>
@@ -439,7 +331,6 @@
         </div>
       </div>
       <div class="stem-card" id="stem-vocals">
-        <span class="stem-ch" aria-hidden="true">CH4</span>
         <div class="stem-icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3M8.5 21h7"/></svg>
         </div>
@@ -468,33 +359,25 @@
         </div>
       </div>
     </div>
-    <p id="seek-tip" class="seek-tip">
-      <span class="tip-scrub">Slide the bar to move through the song — a stem might be silent here but come in elsewhere.</span>
-      <span class="tip-warn">Heads up: a stem might be silent in this clip but come in elsewhere.</span>
-    </p>
 
     <!-- Reveal row -->
     <div class="reveal-row">
-      <div class="reveal-progress">
-        <span id="reveal-label">Stem 1 of 4 revealed</span>
-        <div class="progress-bar"><div id="progress-fill"></div></div>
-      </div>
       <button id="btn-next-stem" class="btn-secondary">Reveal next stem</button>
-      <button id="btn-mp-skip" class="btn-secondary">⏭ Skip stem</button>
+      <button id="btn-mp-skip" class="btn-secondary">Skip stem</button>
+      <button id="btn-hint" class="btn-text btn-hint">Hint</button>
     </div>
 
     <!-- Guess area -->
     <div class="guess-area">
       <div id="hint-list" class="hint-list"></div>
       <div class="guess-form">
-        <input id="guess-input" type="text" placeholder="Song title or artist…" autocomplete="off" />
+        <input id="guess-input" type="text" placeholder="Song or artist" autocomplete="off" />
         <button id="btn-guess">Guess</button>
         <button id="btn-skip" class="btn-skip">Skip</button>
       </div>
-      <button id="btn-hint" class="btn-hint">💡 Hint</button>
       <p id="artist-bonus" class="artist-bonus hidden">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
-        Got it! Now name the artist for a bonus.
+        Got the title. Name the artist for bonus points.
       </p>
       <div id="guess-log"></div>
     </div>
@@ -502,50 +385,27 @@
 
   <!-- ── Result ────────────────────────────────────────────────── -->
   <div id="screen-result" class="screen">
-    <div class="result-box">
-      <h2 id="result-heading">Song Revealed!</h2>
-      <div class="answer-card">
-        <p class="answer-title" id="result-title"></p>
-        <p class="answer-artist" id="result-artist"></p>
-      </div>
-      <p class="final-score">Final score: <strong id="result-score"></strong></p>
+    <div class="page">
+      <h2 id="result-heading" class="result-label"></h2>
+      <p class="answer-title" id="result-title"></p>
+      <p class="answer-artist" id="result-artist"></p>
+      <p class="final-score"><strong id="result-score"></strong> points</p>
       <div id="result-grid" class="daily-grid hidden"></div>
       <p id="result-stats" class="result-stats hidden"></p>
       <div id="result-hints" class="result-hints hidden"></div>
       <div id="result-actions" class="result-actions">
-        <button id="btn-play-again">Play again</button>
-        <div class="share-row">
-          <button id="btn-copy-result" class="btn-secondary btn-icon">
-            <svg class="btn-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-            Copy link
-          </button>
-          <button id="btn-share-result" class="btn-secondary btn-icon">
-            <svg class="btn-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><path d="M16 6l-4-4-4 4M12 2v13"/></svg>
-            Share
-          </button>
-        </div>
+        <button id="btn-play-again" class="btn-wide">Play again</button>
+        <button id="btn-share-result" class="btn-secondary btn-wide">Challenge a friend</button>
       </div>
 
-      <!-- Daily-challenge result (shown instead of the actions above in daily mode) -->
+      <!-- Daily result (replaces the actions above in daily mode) -->
       <div id="daily-result" class="daily-result hidden">
-        <div id="daily-streak" class="daily-streak hidden">
-          <div class="streak-headline"><span class="streak-fire">🔥</span> <span class="streak-words"><span id="streak-current-big">0</span> day streak!</span></div>
-          <div class="streak-detail">Best streak: <span id="streak-best">0</span></div>
-        </div>
         <div id="daily-grid" class="daily-grid"></div>
         <p id="daily-stats" class="result-stats hidden"></p>
-        <div class="share-row">
-          <button id="btn-copy-daily" class="btn-icon">
-            <svg class="btn-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-            Copy
-          </button>
-          <button id="btn-share-daily" class="btn-secondary btn-icon">
-            <svg class="btn-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><path d="M16 6l-4-4-4 4M12 2v13"/></svg>
-            Share
-          </button>
-        </div>
+        <p id="daily-streak" class="daily-streak hidden"><span id="streak-current-big">0</span>-day streak · best <span id="streak-best">0</span></p>
+        <button id="btn-share-daily" class="btn-wide">Share result</button>
         <p id="daily-countdown" class="daily-countdown"></p>
-        <button id="btn-daily-home" class="btn-secondary">← Back to menu</button>
+        <button id="btn-daily-home" class="btn-text">← Back</button>
       </div>
     </div>
   </div>

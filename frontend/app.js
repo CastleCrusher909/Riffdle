@@ -78,7 +78,7 @@ async function loadCatalog() {
     cachedCatalog = data.songs || [];
     cacheOnly = !!data.cache_only;
     if (cacheOnly) {
-      document.getElementById("yt-url").placeholder = "Search songs…";
+      document.getElementById("yt-url").placeholder = "Search for a song";
     }
   } catch (_) {}
 }
@@ -138,7 +138,7 @@ async function handleSearchOrStart() {
   if (cacheOnly) {
     const matches = catalogMatches(input);
     if (matches.length) startGame(watchUrl(matches[0].video_id));
-    else setError(errEl, "No song matches that yet — try Random or Play with friends!");
+    else setError(errEl, "No match yet. Try a random song instead.");
     return;
   }
 
@@ -248,7 +248,7 @@ async function pollStatus(token) {
     else if (data.status === "error") {
       showScreen("screen-landing");
       const msg = data.error === "not_cached"
-        ? "That song isn't in Riffdle yet — try Random, multiplayer, or another song!"
+        ? "That song isn't in Riffdle yet. You can request it below."
         : `Error: ${data.error}`;
       setError(document.getElementById("landing-error"), msg);
       return;
@@ -312,7 +312,7 @@ async function copyToClipboard(text, btn) {
   const original = btn.innerHTML;   // innerHTML so any SVG icon is restored
   try {
     await navigator.clipboard.writeText(text);
-    btn.textContent = "✓ Copied!";
+    btn.textContent = "Copied";
     setTimeout(() => (btn.innerHTML = original), 2000);
   } catch (_) {
     window.prompt("Copy this:", text);
@@ -335,16 +335,7 @@ function songShareMessage() {
   return `${text}\n${url}`;
 }
 
-// Header (mid-game) button: share on mobile, copy on desktop
-document.getElementById("btn-share").addEventListener("click", (e) => {
-  if (!currentVideoId) return;
-  const msg = songShareMessage();
-  if (navigator.share) nativeShare(msg); else copyToClipboard(msg, e.currentTarget);
-});
-// Result screen: explicit Copy + Share
-document.getElementById("btn-copy-result").addEventListener("click", (e) => {
-  if (currentVideoId) copyToClipboard(songShareMessage(), e.currentTarget);
-});
+// Result screen: share sheet on mobile, clipboard on desktop
 document.getElementById("btn-share-result").addEventListener("click", (e) => {
   if (!currentVideoId) return;
   const msg = songShareMessage();
@@ -427,14 +418,14 @@ function refreshStreakUI() {
   clearInterval(landingCountdownId);
   if (playedToday) {
     btn.classList.add("played");
-    title.textContent = "Come back tomorrow";
-    const tick = () => { sub.textContent = `Next Riffdle in ${fmtCountdown()}`; };
+    title.textContent = "See today's result";
+    const tick = () => { sub.textContent = `Next song in ${fmtCountdown()}`; };
     tick();
     landingCountdownId = setInterval(tick, 1000);
   } else {
     btn.classList.remove("played");
-    title.textContent = "Daily Challenge";
-    sub.textContent = "One song · everyone · today";
+    title.textContent = "Today's song";
+    sub.textContent = "";
   }
 }
 
@@ -514,9 +505,9 @@ function dailyShareText(obj) {
 
 function enterDailyResult(obj) {
   if (typeof masterStop === "function") masterStop();
-  document.getElementById("result-heading").textContent = `Daily Riffdle #${obj.number}`;
+  document.getElementById("result-heading").textContent = `Daily #${obj.number}`;
   document.getElementById("result-title").textContent = obj.title || "—";
-  document.getElementById("result-artist").textContent = obj.artist ? `by ${obj.artist}` : "";
+  document.getElementById("result-artist").textContent = obj.artist || "";
   document.getElementById("result-score").textContent = obj.score;
   document.getElementById("result-stats").classList.add("hidden");
   document.getElementById("result-actions").classList.add("hidden");
@@ -526,7 +517,7 @@ function enterDailyResult(obj) {
   renderHintsSummary(obj.hintsUsed || 0, obj.hintCost || 0, obj.hints || []);
   renderStreakResult();
   document.getElementById("daily-grid").innerHTML =
-    `${dailyGrid(obj)}<div class="daily-grid-sub">${obj.solved ? "Solved in " + obj.stems + "/" + obj.total + " stems" : "Not guessed"}</div>`;
+    `${dailyGrid(obj)}<div class="daily-grid-sub">${obj.solved ? "Got it on stem " + obj.stems + " of " + obj.total : "Missed it"}</div>`;
   renderSongStats({ aggregateOnly: true, targetId: "daily-stats" });
   startDailyCountdown();
   showScreen("screen-result");
@@ -536,10 +527,6 @@ function dailyShareTextNow() {
   const saved = localStorage.getItem(dailyKey(dailyNumber));
   return saved ? dailyShareText(JSON.parse(saved)) : null;
 }
-document.getElementById("btn-copy-daily").addEventListener("click", (e) => {
-  const t = dailyShareTextNow();
-  if (t) copyToClipboard(t, e.currentTarget);
-});
 document.getElementById("btn-share-daily").addEventListener("click", (e) => {
   const t = dailyShareTextNow();
   if (!t) return;
@@ -559,7 +546,7 @@ function startDailyCountdown() {
     const next = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1));
     let s = Math.max(0, Math.floor((next - now) / 1000));
     const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
-    el.textContent = `Next Riffdle in ${h}h ${m}m ${sec}s`;
+    el.textContent = `Next song in ${h}h ${m}m ${sec}s`;
   };
   tick();
   dailyCountdownId = setInterval(tick, 1000);
@@ -892,7 +879,6 @@ function initGame(stems) {
 
   document.getElementById("btn-next-stem").onclick = revealNextStem;
   showScreen("screen-game");
-  renderGameStats();
   renderChallengeNote();
   revealNextStem();
 }
@@ -903,26 +889,9 @@ function renderChallengeNote() {
   el.classList.add("hidden");
   el.innerHTML = "";
   if (challengeScore != null && challengeForVid === currentVideoId && !window.mpActive) {
-    el.innerHTML = `A friend scored <strong>${challengeScore}</strong> — beat it!`;
+    el.innerHTML = `A friend scored <strong>${challengeScore}</strong> on this one.`;
     el.classList.remove("hidden");
   }
-}
-
-// Show the song's difficulty live while playing (aggregate only — no answer).
-async function renderGameStats() {
-  const el = document.getElementById("game-stats");
-  el.classList.add("hidden");
-  el.innerHTML = "";
-  if (!currentVideoId || window.mpActive) return;
-  try {
-    const s = await fetch(`${API}/stats/${currentVideoId}`).then((r) => r.json());
-    if (s.avg_stems != null) {
-      let line = `Players usually get this by stem <strong>${s.avg_stems}</strong>`;
-      if (s.solve_rate != null) line += ` · <strong>${Math.round(s.solve_rate * 100)}%</strong> guess it`;
-      el.innerHTML = line;
-      el.classList.remove("hidden");
-    }
-  } catch (_) {}
 }
 
 // ── Stem reveal ───────────────────────────────────────────────
@@ -951,10 +920,6 @@ function revealNextStem() {
 
 function updateRevealUI() {
   const total = activeStemOrder.length;
-  const pct = (stemsRevealed / total) * 100;
-  document.getElementById("progress-fill").style.width = `${pct}%`;
-  document.getElementById("reveal-label").textContent =
-    `Stem ${stemsRevealed} of ${total} revealed`;
 
   const btn = document.getElementById("btn-next-stem");
   if (stemsRevealed >= total) {
@@ -990,12 +955,12 @@ function updateHintButton() {
   if (!btn) return;
   if (hintsUsed >= HINT_COSTS.length) {
     btn.disabled = true;
-    btn.textContent = "💡 No hints left";
+    btn.textContent = "No hints left";
     return;
   }
   btn.disabled = false;
   const cost = HINT_COSTS[hintsUsed];
-  btn.textContent = cost > 0 ? `💡 Hint (-${cost} pts)` : "💡 Hint";
+  btn.textContent = cost > 0 ? `Hint (−${cost})` : "Hint";
 }
 
 function hintText(kind, value) {
@@ -1038,7 +1003,7 @@ function onHintClick() {
   if (window.mpActive || gameOver || hintsUsed >= HINT_COSTS.length) return;
   if (hintsUsed === 0) {
     revealHint();
-    showToast("Free hint!");
+    showToast("First hint is free");
   } else {
     showHintConfirm(HINT_COSTS[hintsUsed], revealHint);
   }
@@ -1062,7 +1027,7 @@ function showToast(msg) {
 // Confirmation popup for paid hints
 function showHintConfirm(cost, onConfirm) {
   const overlay = document.getElementById("hint-confirm");
-  document.getElementById("hint-confirm-text").textContent = `Use hint? Costs ${cost} points.`;
+  document.getElementById("hint-confirm-text").textContent = `Use a hint for ${cost} points?`;
   const ok = document.getElementById("hint-confirm-ok");
   const cancel = document.getElementById("hint-confirm-cancel");
   overlay.classList.remove("hidden");
@@ -1085,7 +1050,7 @@ function renderHintsSummary(used, cost, hints) {
   const el = document.getElementById("result-hints");
   if (!used) { el.classList.add("hidden"); el.innerHTML = ""; return; }
   const lines = (hints || []).map((t) => `• ${escapeHtml(t)}`).join("<br>");
-  el.innerHTML = `<span class="rh-head">Hints used: ${used} (−${cost} pts)</span><br>${lines}`;
+  el.innerHTML = `<span class="rh-head">${used} hint${used === 1 ? "" : "s"} used${cost ? ` (−${cost})` : ""}</span><br>${lines}`;
   el.classList.remove("hidden");
 }
 
@@ -1195,17 +1160,17 @@ function showResult(title, artist) {
   masterStop();
   if (dailyMode) { finishDaily(title, artist); return; }
   // Normal single-player result (reset anything the daily view may have toggled)
-  document.getElementById("result-heading").textContent = "Song Revealed!";
+  document.getElementById("result-heading").textContent = "";
   document.getElementById("daily-result").classList.add("hidden");
   document.getElementById("result-actions").classList.remove("hidden");
   document.getElementById("result-title").textContent = title || "—";
-  document.getElementById("result-artist").textContent = artist ? `by ${artist}` : "";
+  document.getElementById("result-artist").textContent = artist || "";
   document.getElementById("result-score").textContent = score;
   // Heardle-style grid of how you did this round
   const total = activeStemOrder.length || 4;
   const grid = document.getElementById("result-grid");
   grid.innerHTML = `${emojiGrid(playerSolveStems !== null, playerSolveStems, total)}` +
-    `<div class="daily-grid-sub">${playerSolveStems !== null ? "Solved in " + playerSolveStems + "/" + total + " stems" : "Not guessed"}</div>`;
+    `<div class="daily-grid-sub">${playerSolveStems !== null ? "Got it on stem " + playerSolveStems + " of " + total : "Missed it"}</div>`;
   grid.classList.remove("hidden");
   renderHintsSummary(hintsUsed, hintTotalCost, hintsLog.map((h) => h.text));
   showScreen("screen-result");
@@ -1222,13 +1187,10 @@ async function renderSongStats(opts = {}) {
   if (!opts.aggregateOnly) {
     // Challenge result vs the friend who shared this song
     if (challengeScore != null && challengeForVid === currentVideoId) {
-      const verdict = score > challengeScore ? "You win!"
-                    : score === challengeScore ? "🤝 Tie!"
-                    : "😅 They win";
-      parts.push(`🎯 Friend: <strong>${challengeScore}</strong> · You: <strong>${score}</strong> — ${verdict}`);
-    }
-    if (playerSolveStems !== null) {
-      parts.push(`You got it after <strong>${playerSolveStems}</strong> stem${playerSolveStems === 1 ? "" : "s"}.`);
+      const verdict = score > challengeScore ? "You win."
+                    : score === challengeScore ? "Tie."
+                    : "They win.";
+      parts.push(`Your friend scored ${challengeScore}. ${verdict}`);
     }
   }
   try {
@@ -1236,9 +1198,9 @@ async function renderSongStats(opts = {}) {
     await new Promise((r) => setTimeout(r, 400));
     const s = await fetch(`${API}/stats/${currentVideoId}`).then((r) => r.json());
     if (s.avg_stems != null) {
-      let line = `On average players solve it after <strong>${s.avg_stems}</strong> stems`;
-      if (s.solve_rate != null) line += ` · <strong>${Math.round(s.solve_rate * 100)}%</strong> guess it`;
-      parts.push(line + ".");
+      let line = `On average, players get it by stem ${s.avg_stems}.`;
+      if (s.solve_rate != null) line += ` ${Math.round(s.solve_rate * 100)}% of players solve it.`;
+      parts.push(line);
     }
   } catch (_) {}
   if (parts.length) {

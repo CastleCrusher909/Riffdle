@@ -198,7 +198,7 @@ $("btn-join-room").addEventListener("click", () => {
 
 // ── Lobby rendering ───────────────────────────────────────────────────────────
 function renderLobby() {
-  $("lobby-code").textContent = mpRoom.code || "————";
+  $("lobby-code").textContent = mpRoom.code || "····";
 
   // Players
   const list = $("lobby-player-list");
@@ -276,8 +276,8 @@ $("btn-copy-link").addEventListener("click", async () => {
   const link = `${location.origin}/?room=${mpRoom.code}`;
   try {
     await navigator.clipboard.writeText(link);
-    $("btn-copy-link").textContent = "✓ Copied!";
-    setTimeout(() => { $("btn-copy-link").textContent = "🔗 Copy invite link"; }, 1500);
+    $("btn-copy-link").textContent = "Copied";
+    setTimeout(() => { $("btn-copy-link").textContent = "Copy invite link"; }, 1500);
   } catch (_) {
     prompt("Copy this invite link:", link);
   }
@@ -421,9 +421,7 @@ function mpTryAutoplay() {
 }
 
 function updateMpProgress() {
-  const total = activeStemOrder.length || 1;
-  $("progress-fill").style.width = `${(stemsRevealed / total) * 100}%`;
-  $("reveal-label").textContent = `Stem ${stemsRevealed} of ${total} revealed`;
+  // Progress is shown by the stem rows' lock/check state; nothing else to update.
 }
 
 function mpStartCountdown(seconds) {
@@ -460,10 +458,10 @@ function renderCountdown() {
   const el = $("mp-timer");
   if (stemsRevealed >= mpTotalStems) {
     el.innerHTML = mpCountdownLeft > 0
-      ? `Last chance — <strong>${mpCountdownLeft}s</strong>`
-      : `Time's up!`;
+      ? `Last chance: <strong>${mpCountdownLeft}s</strong>`
+      : `Time's up`;
   } else {
-    el.innerHTML = `🎧 Listen — <strong>${mpCountdownLeft}s</strong>`;
+    el.innerHTML = `Next stem in <strong>${mpCountdownLeft}s</strong>`;
   }
 }
 
@@ -548,7 +546,7 @@ function onLastCall(d) {
   el.classList.add("last-call");
   const render = () => {
     el.innerHTML = d.is_final
-      ? `⏰ Last guesses — <strong>${left}s</strong>`
+      ? `Last guesses: <strong>${left}s</strong>`
       : `Next round in <strong>${left}s</strong>`;
   };
   render();
@@ -650,7 +648,7 @@ function onRoundOver(d) {
   const multi = (d.total || 1) > 1;
 
   // Heading + round indicator
-  $("mp-result-heading").textContent = matchOver ? "Match Over" : "Round Over";
+  $("mp-result-heading").textContent = matchOver ? "Match over" : "Round over";
   $("mp-result-round").textContent = multi ? `Round ${d.round} of ${d.total}` : "";
   $("mp-lb-label").textContent = matchOver ? "Final standings" : "Standings";
 
