@@ -424,10 +424,8 @@ body.mp #btn-next-stem, body.mp #btn-skip { display: none !important; }
 .result-label:empty { display: none; }
 .answer-title { font-size: 2rem; font-weight: 800; letter-spacing: -0.02em; line-height: 1.15; margin-top: 1rem; }
 .answer-artist { font-size: 1.1rem; color: var(--muted); margin-top: 0.15rem; }
-.result-listen { margin-top: 1rem; }
-.listen-row { display: flex; gap: 0.5rem; flex-wrap: wrap; }
-.listen-row button { flex: 1; min-width: 9rem; }
-.yt-embed { margin-top: 0.75rem; aspect-ratio: 16 / 9; border-radius: var(--radius); overflow: hidden; background: var(--surface); }
+.result-listen { margin-top: 1rem; max-width: 560px; }
+.yt-embed { aspect-ratio: 16 / 9; border-radius: var(--radius); overflow: hidden; background: var(--surface); }
 .yt-embed iframe { width: 100%; height: 100%; border: 0; display: block; }
 .yt-link { display: inline-block; margin-top: 0.5rem; font-size: 0.85rem; color: var(--muted); }
 .yt-link:hover { color: var(--text); }

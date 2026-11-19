@@ -485,7 +485,7 @@ function finishDaily(title, artist) {
   };
   try { localStorage.setItem(dailyKey(dailyNumber), JSON.stringify(obj)); } catch (_) {}
   recordStreak(dailyNumber);
-  enterDailyResult(obj, { canMix: true });
+  enterDailyResult(obj, { autoplay: true });
 }
 
 function emojiGrid(solved, stems, total) {
@@ -522,7 +522,7 @@ function enterDailyResult(obj, opts = {}) {
   renderSongStats({ aggregateOnly: true, targetId: "daily-stats" });
   startDailyCountdown();
   showScreen("screen-result");
-  setupListen({ canMix: !!opts.canMix, videoId: currentVideoId });
+  setupListen({ autoplay: !!opts.autoplay, videoId: currentVideoId });
 }
 
 function dailyShareTextNow() {
@@ -1229,89 +1229,31 @@ function showResult(title, artist) {
   grid.classList.remove("hidden");
   renderHintsSummary(hintsUsed, hintTotalCost, hintsLog.map((h) => h.text));
   showScreen("screen-result");
-  setupListen({ canMix: true, videoId: currentVideoId });
+  setupListen({ autoplay: true, videoId: currentVideoId });
   renderSongStats();
 }
 
-// ── Result screen: hear the whole thing ───────────────────────
-// "Play full mix" plays all four stems together (the cached ~90s clip).
-// "Full song on YouTube" embeds the real video (youtube-nocookie, loaded only
-// on click so nothing from YouTube loads unless the player asks for it).
-let mixSources = [];
-let mixPlaying = false;
-
-function setMixLabel(text) { document.getElementById("btn-full-mix").textContent = text; }
-
-function stopFullMix() {
-  mixPlaying = false;
-  mixSources.forEach((src) => { try { src.stop(); } catch (_) {} });
-  mixSources = [];
-  setMixLabel("▶ Play full mix");
-}
-
-async function toggleFullMix() {
-  if (mixPlaying) { stopFullMix(); return; }
-  const btn = document.getElementById("btn-full-mix");
-  btn.disabled = true;
-  setMixLabel("Loading…");
-  try {
-    const ctx = ensureCtx();
-    if (ctx.state === "suspended") await ctx.resume();
-    const stems = activeStemOrder.length ? activeStemOrder : ALL_STEMS;
-    const bufs = (await Promise.all(stems.map((st) => loadStemBuffer(st).catch(() => null)))).filter(Boolean);
-    if (!bufs.length) throw new Error("no audio");
-    const when = ctx.currentTime + SCHEDULE_AHEAD;
-    mixSources = bufs.map((buf) => {
-      const src = ctx.createBufferSource();
-      src.buffer = buf;
-      src.connect(ctx.destination);
-      src.start(when);
-      return src;
-    });
-    mixSources[0].onended = () => { if (mixPlaying) stopFullMix(); };
-    mixPlaying = true;
-    setMixLabel("❚❚ Stop");
-  } catch (_) {
-    setMixLabel("▶ Play full mix");
-    btn.classList.add("hidden");   // audio is gone (e.g. session expired) — YouTube still works
-  } finally {
-    btn.disabled = false;
-  }
-}
-
-function showYouTube() {
-  const vid = document.getElementById("result-listen").dataset.vid;
-  if (!vid) return;
-  stopFullMix();
-  const box = document.getElementById("yt-embed");
-  box.innerHTML = `<iframe src="https://www.youtube-nocookie.com/embed/${encodeURIComponent(vid)}?autoplay=1&rel=0"
-    title="Full song on YouTube" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>`;
-  box.classList.remove("hidden");
-  document.getElementById("yt-link").classList.remove("hidden");
-  document.getElementById("btn-youtube").classList.add("hidden");
-}
-
+// ── Result screen: the real song ──────────────────────────────
+// Embeds the song's YouTube video (youtube-nocookie) right on the result screen.
+// It tries to start playing on its own; browsers that block autoplay with
+// sound (mostly Safari/iOS) just show the video ready for one tap.
 function resetListen() {
-  if (mixPlaying) stopFullMix();
   const box = document.getElementById("yt-embed");
-  if (box) { box.innerHTML = ""; box.classList.add("hidden"); }
-  document.getElementById("yt-link")?.classList.add("hidden");
-  document.getElementById("btn-youtube")?.classList.remove("hidden");
+  if (box) box.innerHTML = "";   // removing the iframe stops the video
+  document.getElementById("result-listen")?.classList.add("hidden");
 }
 
-function setupListen({ canMix, videoId }) {
+function setupListen({ autoplay, videoId }) {
   resetListen();
-  const wrap = document.getElementById("result-listen");
   const vid = /^[A-Za-z0-9_-]{11}$/.test(videoId || "") ? videoId : null;
-  wrap.dataset.vid = vid || "";
-  document.getElementById("btn-full-mix").classList.toggle("hidden", !(canMix && sessionId));
-  document.getElementById("btn-youtube").classList.toggle("hidden", !vid);
-  if (vid) document.getElementById("yt-link").href = `https://www.youtube.com/watch?v=${vid}`;
-  wrap.classList.toggle("hidden", !(canMix && sessionId) && !vid);
+  if (!vid) return;
+  const params = new URLSearchParams({ rel: "0", playsinline: "1", autoplay: autoplay ? "1" : "0" });
+  document.getElementById("yt-embed").innerHTML =
+    `<iframe src="https://www.youtube-nocookie.com/embed/${vid}?${params}"
+      title="Full song on YouTube" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>`;
+  document.getElementById("yt-link").href = `https://www.youtube.com/watch?v=${vid}`;
+  document.getElementById("result-listen").classList.remove("hidden");
 }
-
-document.getElementById("btn-full-mix").addEventListener("click", toggleFullMix);
-document.getElementById("btn-youtube").addEventListener("click", showYouTube);
 
 // Fetch and show how quickly people solve this song (vs. how the player did).
 async function renderSongStats(opts = {}) {
