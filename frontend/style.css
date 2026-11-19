@@ -213,6 +213,8 @@ input:focus { outline: none; border-color: var(--text); }
 .site-about summary { cursor: pointer; }
 .site-about-body { margin-top: 0.8rem; }
 .site-about-body h3 { font-size: 0.9rem; color: var(--text); margin: 1rem 0 0.2rem; }
+.site-footer { margin-top: 2.5rem; padding-top: 1rem; border-top: 1px solid var(--line); font-size: 0.75rem; color: var(--faint); line-height: 1.5; }
+.site-footer a { color: var(--muted); }
 
 /* ── Page titles (multiplayer, lobby) ─────────────────────────── */
 .page > .btn-text:first-child { margin-bottom: 1rem; }
