@@ -843,6 +843,24 @@ def serve_stem(session_id, stem_name):
     return send_from_directory(str(file_path.parent), file_path.name)
 
 
+@app.route("/promo/<name>")
+def serve_promo_clip(name):
+    # Public, stable links for the social-media clips (promo-clips/ in R2), so
+    # Buffer can fetch them when it publishes. Presigned links expire too soon.
+    if not r2 or not re.fullmatch(r"[a-z0-9-]+\.mp4", name):
+        return jsonify({"error": "Not found"}), 404
+    try:
+        obj = r2.get_object(Bucket=R2_BUCKET, Key=f"promo-clips/{name}")
+    except ClientError:
+        return jsonify({"error": "Not found"}), 404
+    return app.response_class(
+        obj["Body"].iter_chunks(64 * 1024),
+        mimetype="video/mp4",
+        headers={"Content-Length": str(obj["ContentLength"]),
+                 "Cache-Control": "public, max-age=86400"},
+    )
+
+
 @app.route("/api/guess", methods=["POST"])
 def submit_guess():
     data = request.get_json()
