@@ -303,6 +303,8 @@ function mpLeave() {
 
 // ── Game ──────────────────────────────────────────────────────────────────────
 async function mpStartGame(d) {
+  // Only the host counts it, so each online match counts once.
+  if (mpRoom.isHost && d.round === 1) track("kickoff-online");
   window.mpActive = true;
   document.body.classList.add("mp");
 
@@ -669,6 +671,7 @@ function onRoundOver(d) {
   // Between rounds: everyone sees an auto-advance countdown, no buttons.
   // Match over: host gets "Play again", others wait.
   if (matchOver) {
+    if (mpRoom.isHost) track("game-finished-online");
     $("mp-intermission").classList.add("hidden");
     $("btn-mp-play-again").classList.toggle("hidden", !mpRoom.isHost);
     $("mp-result-wait").classList.toggle("hidden", mpRoom.isHost);

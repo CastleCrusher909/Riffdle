@@ -41,6 +41,16 @@ const GOATCOUNTER_CODE = "riffdle";
   }
 })();
 
+// Count a game event (shows up next to page views in GoatCounter).
+// No-op on localhost or when an ad blocker stops count.js from loading.
+function track(name) {
+  try {
+    if (window.goatcounter && window.goatcounter.count) {
+      window.goatcounter.count({ path: name, title: name, event: true });
+    }
+  } catch (_) { /* never let analytics break the game */ }
+}
+
 // ── Hints ─────────────────────────────────────────────────────
 // Up to 3 per round; 1st free, 2nd −75 pts, 3rd −150 pts.
 const HINT_COSTS = [0, 75, 150];   // cost of the 1st, 2nd, 3rd hint
@@ -204,6 +214,7 @@ async function startGame(url, opts = {}) {
   playerSolveStems = null;
   dailyMode = !!opts.daily;
   dailyNumber = opts.daily ? opts.number : null;
+  track(dailyMode ? "kickoff-daily" : "kickoff-solo");
   const errEl = document.getElementById("landing-error");
   errEl.classList.add("hidden");
   document.getElementById("search-results").classList.add("hidden");
@@ -1213,6 +1224,7 @@ async function showAnswer() {
 
 function showResult(title, artist) {
   masterStop();
+  track(dailyMode ? "game-finished-daily" : "game-finished-solo");
   if (dailyMode) { finishDaily(title, artist); return; }
   // Normal single-player result (reset anything the daily view may have toggled)
   document.getElementById("result-heading").textContent = "";
