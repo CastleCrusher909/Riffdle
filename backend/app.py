@@ -768,6 +768,21 @@ def index():
     return send_from_directory(app.static_folder, "index.html")
 
 
+@app.errorhandler(404)
+def not_found(e):
+    # API callers get JSON; people who mistype a URL get a real page.
+    if request.path.startswith("/api/"):
+        return jsonify({"error": "Not found"}), 404
+    return send_from_directory(app.static_folder, "404.html"), 404
+
+
+@app.after_request
+def add_security_headers(resp):
+    # Tell browsers to always use HTTPS (Render already redirects http -> https).
+    resp.headers.setdefault("Strict-Transport-Security", "max-age=31536000")
+    return resp
+
+
 @app.route("/api/start", methods=["POST"])
 def start_game():
     data = request.get_json()
@@ -1002,6 +1017,9 @@ def song_stats(video_id):
     })
 
 
+_request_last: dict[str, float] = {}   # ip -> last song-request time (spam guard)
+
+
 @app.route("/api/request", methods=["POST"])
 def request_song():
     """Log a user's request to add a song. The owner reviews these later
@@ -1013,6 +1031,11 @@ def request_song():
         return jsonify({"ok": False, "error": "empty"}), 400
     if not r2:
         return jsonify({"ok": False, "error": "unavailable"}), 503
+    ip = (request.headers.get("X-Forwarded-For") or request.remote_addr or "").split(",")[0].strip()
+    now = time.time()
+    if now - _request_last.get(ip, 0) < 10:
+        return jsonify({"ok": False, "error": "slow_down"}), 429
+    _request_last[ip] = now
     log_song_request(query, contact)
     return jsonify({"ok": True})
 
